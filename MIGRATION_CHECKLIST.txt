@@ -1,0 +1,94 @@
+═══════════════════════════════════════════════════════════
+  FIGMA MAKE → REPLIT MIGRATION CHECKLIST
+═══════════════════════════════════════════════════════════
+
+STEP 1: CREATE REPLIT PROJECT
+──────────────────────────────────────────────────────────
+□ Go to replit.com
+□ Click "Create Repl"
+□ Choose "React TypeScript" template
+□ Name your project
+□ Wait for Replit to initialize
+
+
+STEP 2: COPY FOLDERS (Copy entire folders, not individual files!)
+──────────────────────────────────────────────────────────
+□ Copy src/app/ folder → Replit src/app/
+□ Copy src/styles/ folder → Replit src/styles/
+□ Copy src/imports/ folder → Replit src/imports/
+□ Copy utils/ folder → Replit utils/
+□ Copy vite.config.ts → Replit root
+
+
+STEP 3: CREATE NEW FILES IN REPLIT
+──────────────────────────────────────────────────────────
+Root Directory Files:
+□ Create index.html (see REPLIT_SETUP.md for content)
+□ Create tsconfig.json (see REPLIT_SETUP.md for content)
+□ Create tsconfig.node.json (see REPLIT_SETUP.md for content)
+□ Copy package.json.replit → rename to package.json
+
+Src Directory Files:
+□ Create src/main.tsx (see REPLIT_SETUP.md for content)
+
+
+STEP 4: INSTALL & RUN
+──────────────────────────────────────────────────────────
+In Replit Shell, run these commands:
+
+□ npm install
+  (Wait for all dependencies to install - may take 2-3 minutes)
+
+□ npm run dev
+  (Your app should start!)
+
+
+STEP 5: VERIFY IT WORKS
+──────────────────────────────────────────────────────────
+□ No errors in terminal
+□ Preview window shows your app
+□ Launch screen appears
+□ Can navigate through the app
+□ Styling looks correct
+□ Images load properly
+
+
+TROUBLESHOOTING (If something doesn't work)
+──────────────────────────────────────────────────────────
+□ Check browser console (F12) for errors
+□ Verify file structure matches guide
+□ Make sure all folders were copied
+□ Try running "npm install" again
+□ Check that vite.config.ts was copied correctly
+□ Verify tsconfig.json has the paths alias configured
+
+
+FINAL VERIFICATION
+──────────────────────────────────────────────────────────
+Your project folder should look like:
+
+your-replit-project/
+├── index.html ✓
+├── package.json ✓
+├── tsconfig.json ✓
+├── tsconfig.node.json ✓
+├── vite.config.ts ✓
+├── src/
+│   ├── main.tsx ✓
+│   ├── app/
+│   │   ├── App.tsx ✓
+│   │   └── components/ (all files) ✓
+│   ├── imports/ (3 PNG files) ✓
+│   └── styles/ (5 CSS files) ✓
+└── utils/
+    └── supabase/ (2 files) ✓
+
+
+═══════════════════════════════════════════════════════════
+  ALL DONE! Your app should be running! 🎉
+═══════════════════════════════════════════════════════════
+
+If you need more detailed help, see:
+- REPLIT_SETUP.md (quick setup)
+- EXPORT_GUIDE.md (detailed guide)
+- FILE_LIST.txt (complete file list)

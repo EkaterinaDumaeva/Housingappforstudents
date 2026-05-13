@@ -1,0 +1,144 @@
+COMPLETE FILE LIST FOR EXPORT TO REPLIT
+==========================================
+
+ROOT LEVEL FILES TO CREATE/COPY:
+---------------------------------
+✓ index.html (CREATE NEW - see REPLIT_SETUP.md)
+✓ package.json (COPY - see EXPORT_GUIDE.md for updated version)
+✓ tsconfig.json (CREATE NEW - see REPLIT_SETUP.md)
+✓ tsconfig.node.json (CREATE NEW - see REPLIT_SETUP.md)
+✓ vite.config.ts (COPY from current project)
+
+
+SRC FOLDER FILES:
+-----------------
+✓ src/main.tsx (CREATE NEW - see REPLIT_SETUP.md)
+
+src/app/:
+✓ src/app/App.tsx
+
+src/app/components/:
+✓ src/app/components/AccountSettings.tsx
+✓ src/app/components/AdvancedFilters.tsx
+✓ src/app/components/AgreementModal.tsx
+✓ src/app/components/AuthModal.tsx
+✓ src/app/components/BookingFlow.tsx
+✓ src/app/components/CancellationModal.tsx
+✓ src/app/components/CandidateSearch.tsx
+✓ src/app/components/CreateJobModal.tsx
+✓ src/app/components/CreateListingModal.tsx
+✓ src/app/components/EditParticipantProfile.tsx
+✓ src/app/components/EmergencySupport.tsx
+✓ src/app/components/EmptyState.tsx
+✓ src/app/components/EmployerDashboard.tsx
+✓ src/app/components/ExceptionClaimStatus.tsx
+✓ src/app/components/FilterSheet.tsx
+✓ src/app/components/HelpChat.tsx
+✓ src/app/components/HostCases.tsx
+✓ src/app/components/HostDashboard.tsx
+✓ src/app/components/HostOpenCaseModal.tsx
+✓ src/app/components/HostReservations.tsx
+✓ src/app/components/HousingCard.tsx
+✓ src/app/components/HousingCardSkeleton.tsx
+✓ src/app/components/HousingDetails.tsx
+✓ src/app/components/HousingMap.tsx
+✓ src/app/components/InteractiveHousingMap.tsx
+✓ src/app/components/JobCard.tsx
+✓ src/app/components/JobCardSkeleton.tsx
+✓ src/app/components/JobDetails.tsx
+✓ src/app/components/JobOffersView.tsx
+✓ src/app/components/JobSeekingStatus.tsx
+✓ src/app/components/LaunchScreen.tsx
+✓ src/app/components/LocationSearch.tsx
+✓ src/app/components/Messages.tsx
+✓ src/app/components/OpenCaseModal.tsx
+✓ src/app/components/ParticipantProfile.tsx
+✓ src/app/components/ProfilePhotoUpload.tsx
+✓ src/app/components/ReliabilityProfile.tsx
+✓ src/app/components/Reservations.tsx
+✓ src/app/components/SavedListings.tsx
+✓ src/app/components/SearchBar.tsx
+✓ src/app/components/SendJobOfferModal.tsx
+✓ src/app/components/UploadDocumentModal.tsx
+✓ src/app/components/VerificationBadge.tsx
+✓ src/app/components/VerificationModal.tsx
+
+src/app/components/ui/ (ALL FILES):
+✓ src/app/components/ui/accordion.tsx
+✓ src/app/components/ui/alert-dialog.tsx
+✓ src/app/components/ui/alert.tsx
+✓ src/app/components/ui/aspect-ratio.tsx
+✓ src/app/components/ui/avatar.tsx
+✓ src/app/components/ui/badge.tsx
+✓ src/app/components/ui/breadcrumb.tsx
+✓ src/app/components/ui/button.tsx
+✓ src/app/components/ui/calendar.tsx
+✓ src/app/components/ui/card.tsx
+✓ src/app/components/ui/carousel.tsx
+✓ src/app/components/ui/chart.tsx
+✓ src/app/components/ui/checkbox.tsx
+✓ src/app/components/ui/collapsible.tsx
+✓ src/app/components/ui/command.tsx
+✓ src/app/components/ui/context-menu.tsx
+✓ src/app/components/ui/dialog.tsx
+✓ src/app/components/ui/drawer.tsx
+✓ src/app/components/ui/dropdown-menu.tsx
+✓ src/app/components/ui/form.tsx
+✓ src/app/components/ui/hover-card.tsx
+✓ src/app/components/ui/input-otp.tsx
+✓ src/app/components/ui/input.tsx
+✓ src/app/components/ui/label.tsx
+✓ src/app/components/ui/menubar.tsx
+✓ src/app/components/ui/navigation-menu.tsx
+✓ src/app/components/ui/pagination.tsx
+✓ src/app/components/ui/popover.tsx
+✓ src/app/components/ui/progress.tsx
+✓ src/app/components/ui/radio-group.tsx
+✓ src/app/components/ui/resizable.tsx
+✓ src/app/components/ui/scroll-area.tsx
+✓ src/app/components/ui/select.tsx
+✓ src/app/components/ui/separator.tsx
+✓ src/app/components/ui/sheet.tsx
+✓ src/app/components/ui/sidebar.tsx
+✓ src/app/components/ui/skeleton.tsx
+✓ src/app/components/ui/slider.tsx
+✓ src/app/components/ui/sonner.tsx
+✓ src/app/components/ui/switch.tsx
+✓ src/app/components/ui/table.tsx
+✓ src/app/components/ui/tabs.tsx
+✓ src/app/components/ui/textarea.tsx
+✓ src/app/components/ui/toggle-group.tsx
+✓ src/app/components/ui/toggle.tsx
+✓ src/app/components/ui/tooltip.tsx
+
+src/app/components/figma/:
+✓ src/app/components/figma/ImageWithFallback.tsx
+
+src/styles/ (ALL FILES):
+✓ src/styles/fonts.css
+✓ src/styles/globals.css
+✓ src/styles/index.css
+✓ src/styles/tailwind.css
+✓ src/styles/theme.css
+
+src/imports/ (ALL IMAGE FILES):
+✓ src/imports/1EB48CAB-5628-444E-A391-54A14BEAABAF.png
+✓ src/imports/80E81ED4-EC98-4911-B292-4DF2971664A3.png
+✓ src/imports/9FE3D119-9851-42D8-BE0E-ACDA58186D5D.png
+
+
+UTILS FOLDER:
+-------------
+✓ utils/supabase/client.tsx
+✓ utils/supabase/info.tsx
+
+
+OPTIONAL (if using backend):
+-----------------------------
+□ supabase/ folder (entire folder if you're using Supabase backend)
+
+
+TOTAL FILES TO COPY/CREATE: ~110+ files
+
+Note: Focus on copying entire folders rather than individual files.
+This will be much faster!
