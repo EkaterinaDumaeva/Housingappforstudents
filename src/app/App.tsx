@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SlidersHorizontal, Heart, User as UserIcon, LogOut, LayoutDashboard, Home, Search, MessageCircle, Bookmark, Calendar, Settings, Briefcase, Star, Building2, DollarSign, Clock, Shield } from 'lucide-react';
+import { SlidersHorizontal, Heart, User as UserIcon, LogOut, LayoutDashboard, Home, Search, MessageCircle, Bookmark, Calendar, Settings, Briefcase, Star, Building2, DollarSign, Clock, Shield, Car, Users, Gift, FileText, Plus, ChevronRight, CheckSquare, Trophy } from 'lucide-react';
 import { SearchBar } from './components/SearchBar';
 import { HousingCard, Housing } from './components/HousingCard';
 import { HousingDetails } from './components/HousingDetails';
@@ -25,6 +25,21 @@ import { JobCard, Job } from './components/JobCard';
 import { JobDetails } from './components/JobDetails';
 import { AgreementModal } from './components/AgreementModal';
 import { JobOffersView, JobOffer } from './components/JobOffersView';
+import { AdminLogin } from './components/AdminLogin';
+import { AdminDashboard } from './components/AdminDashboard';
+import { ServiceHub } from './components/ServiceHub';
+import { BecomeProviderModal, ProviderApplication } from './components/BecomeProviderModal';
+import { ServiceDetailModal } from './components/ServiceDetailModal';
+import { ServiceListing } from './components/ServiceListingCard';
+import { ProviderDashboard } from './components/ProviderDashboard';
+import { TaskCenter } from './components/TaskCenter';
+import { CreateTaskModal, TaskData } from './components/CreateTaskModal';
+import { Task, TaskCard } from './components/TaskCard';
+import { TaskDetailModal } from './components/TaskDetailModal';
+import { UploadProofModal } from './components/UploadProofModal';
+import { HostReviewTaskModal } from './components/HostReviewTaskModal';
+import { RewardSelectionModal } from './components/RewardSelectionModal';
+import { GoodCauseSelectionModal } from './components/GoodCauseSelectionModal';
 
 const initialMockHousings: Array<Housing & {
   description: string;
@@ -42,7 +57,7 @@ const initialMockHousings: Array<Housing & {
 // Mock job data
 const initialMockJobs: Job[] = [];
 
-type View = 'home' | 'details' | 'booking' | 'dashboard' | 'account' | 'verification' | 'search' | 'saved' | 'messages' | 'reservations' | 'jobDetails' | 'job-offers';
+type View = 'home' | 'details' | 'booking' | 'dashboard' | 'account' | 'verification' | 'search' | 'saved' | 'messages' | 'reservations' | 'jobDetails' | 'job-offers' | 'services' | 'providerDashboard' | 'tasks';
 type SearchMode = 'housing' | 'jobs';
 
 export default function App() {
@@ -95,6 +110,75 @@ export default function App() {
   const [newCasesCount, setNewCasesCount] = useState(1); // Mock count - would come from backend
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [jobOffers, setJobOffers] = useState<JobOffer[]>([]);
+
+  // Admin mode states
+  const [adminMode, setAdminMode] = useState<'login' | 'dashboard' | null>(null);
+  const [adminUser, setAdminUser] = useState<User | null>(null);
+  const [adminClickCount, setAdminClickCount] = useState(0);
+
+  // Service Hub states
+  const [showBecomeProvider, setShowBecomeProvider] = useState(false);
+  const [showServiceDetail, setShowServiceDetail] = useState(false);
+  const [selectedService, setSelectedService] = useState<ServiceListing | null>(null);
+  const [userIsProvider, setUserIsProvider] = useState(false); // Mock - would be determined by backend
+
+  // Task & Rewards states
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [showTaskDetail, setShowTaskDetail] = useState(false);
+  const [showUploadProof, setShowUploadProof] = useState(false);
+  const [showHostReviewTask, setShowHostReviewTask] = useState(false);
+  const [showRewardSelection, setShowRewardSelection] = useState(false);
+  const [showGoodCauseSelection, setShowGoodCauseSelection] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([
+    {
+      id: 'task-1',
+      listingId: '1',
+      listingName: 'Sunset View Apartment',
+      title: 'Clean kitchen after weekend',
+      category: 'Kitchen cleaning',
+      description: 'Wipe down counters, clean dishes, sweep and mop floor',
+      rewardAmount: 25.00,
+      deadline: '2026-05-20T18:00:00',
+      status: 'open',
+      hostName: 'John Smith',
+      hostId: 'host-1',
+      currentAcceptances: 0,
+      createdAt: '2026-05-18T10:00:00'
+    },
+    {
+      id: 'task-2',
+      listingId: '1',
+      listingName: 'Sunset View Apartment',
+      title: 'Take out trash and recycling',
+      category: 'Trash/recycling',
+      description: 'Take all bins to the curb for pickup tomorrow morning',
+      rewardAmount: 15.00,
+      deadline: '2026-05-19T20:00:00',
+      status: 'accepted',
+      hostName: 'John Smith',
+      hostId: 'host-1',
+      currentAcceptances: 1,
+      createdAt: '2026-05-18T08:00:00'
+    },
+    {
+      id: 'task-3',
+      listingId: '2',
+      listingName: 'Cozy Beach House Share',
+      title: 'Organize common area',
+      category: 'Organizing common area',
+      description: 'Tidy up living room, arrange cushions, organize magazines and remotes',
+      rewardAmount: 20.00,
+      deadline: '2026-05-21T12:00:00',
+      status: 'open',
+      hostName: 'Sarah Johnson',
+      hostId: 'host-2',
+      currentAcceptances: 0,
+      maxAcceptances: 2,
+      createdAt: '2026-05-18T09:00:00'
+    }
+  ]);
+  const [pendingRewardTask, setPendingRewardTask] = useState<Task | null>(null);
 
   // Track all bookings with dates
   const [bookings, setBookings] = useState<Array<{
@@ -328,6 +412,125 @@ export default function App() {
     // Clear user from localStorage on explicit logout
     const currentUserKey = 'voyaCurrentUser';
     localStorage.removeItem(currentUserKey);
+  };
+
+  // Admin handlers
+  const handleAdminLogin = (email: string, password: string) => {
+    // Create admin user object
+    const admin: User = {
+      name: 'Admin User',
+      email: email,
+      userType: 'participant', // Use participant type to avoid conflicts
+      profilePhoto: '',
+      participantProfile: undefined,
+      hostProfile: undefined
+    };
+    setAdminUser(admin);
+    setAdminMode('dashboard');
+  };
+
+  const handleAdminLogout = () => {
+    setAdminUser(null);
+    setAdminMode(null);
+    setAdminClickCount(0);
+  };
+
+  // Task handlers
+  const handleCreateTask = (taskData: TaskData) => {
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      listingId: taskData.listingId || '1',
+      listingName: 'Current Listing',
+      title: taskData.title,
+      category: taskData.category === 'other' && taskData.customCategory ? taskData.customCategory : taskData.category,
+      description: taskData.description,
+      rewardAmount: taskData.rewardAmount,
+      deadline: taskData.deadline,
+      status: 'open',
+      hostName: user?.name || 'Host',
+      hostId: user?.email || 'host-id',
+      currentAcceptances: 0,
+      maxAcceptances: taskData.maxAcceptances,
+      createdAt: new Date().toISOString()
+    };
+    setTasks([...tasks, newTask]);
+  };
+
+  const handleAcceptTask = (taskId: string) => {
+    setTasks(tasks.map(t =>
+      t.id === taskId ? { ...t, status: 'accepted', currentAcceptances: t.currentAcceptances + 1 } : t
+    ));
+  };
+
+  const handleSubmitProof = (taskId: string, proof: { photos: File[]; videos: File[]; note: string }) => {
+    setTasks(tasks.map(t =>
+      t.id === taskId ? {
+        ...t,
+        status: 'submitted',
+        submittedProof: {
+          photos: proof.photos.map(f => f.name),
+          videos: proof.videos.map(f => f.name),
+          note: proof.note,
+          submittedAt: new Date().toISOString()
+        }
+      } : t
+    ));
+  };
+
+  const handleApproveTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      setTasks(tasks.map(t =>
+        t.id === taskId ? { ...t, status: 'approved' } : t
+      ));
+      setPendingRewardTask(task);
+      setShowRewardSelection(true);
+    }
+  };
+
+  const handleRejectTask = (taskId: string, reason: string) => {
+    setTasks(tasks.map(t =>
+      t.id === taskId ? { ...t, status: 'rejected' } : t
+    ));
+  };
+
+  const handleRequestRevision = (taskId: string, feedback: string) => {
+    setTasks(tasks.map(t =>
+      t.id === taskId ? { ...t, status: 'in_progress' } : t
+    ));
+  };
+
+  const handleCashOut = () => {
+    if (pendingRewardTask) {
+      setTasks(tasks.map(t =>
+        t.id === pendingRewardTask.id ? { ...t, status: 'completed' } : t
+      ));
+      setPendingRewardTask(null);
+    }
+    setShowRewardSelection(false);
+  };
+
+  const handleSupportCause = () => {
+    setShowRewardSelection(false);
+    setShowGoodCauseSelection(true);
+  };
+
+  const handleConfirmCause = (causeId: string) => {
+    if (pendingRewardTask) {
+      setTasks(tasks.map(t =>
+        t.id === pendingRewardTask.id ? { ...t, status: 'completed' } : t
+      ));
+      setPendingRewardTask(null);
+    }
+    setShowGoodCauseSelection(false);
+  };
+
+  const handleLogoClick = () => {
+    setAdminClickCount(prev => prev + 1);
+    if (adminClickCount + 1 === 5) {
+      setAdminMode('login');
+      setAdminClickCount(0);
+    }
   };
 
   const handleSendJobOffer = (candidateId: string, offerData: any) => {
@@ -721,6 +924,25 @@ export default function App() {
     );
   };
 
+  // Admin mode interface
+  if (adminMode === 'login') {
+    return (
+      <AdminLogin
+        onLogin={handleAdminLogin}
+        onBack={() => setAdminMode(null)}
+      />
+    );
+  }
+
+  if (adminMode === 'dashboard' && adminUser) {
+    return (
+      <AdminDashboard
+        user={adminUser}
+        onLogout={handleAdminLogout}
+      />
+    );
+  }
+
   if (showLaunchScreen) {
     return <LaunchScreen />;
   }
@@ -753,7 +975,7 @@ export default function App() {
             />
           </div>
         </div>
-        <HelpChat userName={user.name} />
+        <HelpChat userName={user.name} userRole={user.userType} />
       </div>
     );
   }
@@ -780,7 +1002,7 @@ export default function App() {
         <div className="flex-1 overflow-hidden">
           <AccountSettings user={user} onPhotoChange={handlePhotoChange} onUpdateProfile={handleUpdateProfile} />
         </div>
-        <HelpChat userName={user.name} />
+        <HelpChat userName={user.name} userRole={user.userType} />
       </div>
     );
   }
@@ -829,6 +1051,29 @@ export default function App() {
           />
         )}
 
+        {/* Host Task Modals */}
+        {showCreateTask && user.userType === 'host' && (
+          <CreateTaskModal
+            listingId="1"
+            listingName="Your Listing"
+            onClose={() => setShowCreateTask(false)}
+            onSubmit={handleCreateTask}
+          />
+        )}
+
+        {showHostReviewTask && selectedTask && user.userType === 'host' && (
+          <HostReviewTaskModal
+            task={selectedTask}
+            onClose={() => {
+              setShowHostReviewTask(false);
+              setSelectedTask(null);
+            }}
+            onApprove={handleApproveTask}
+            onReject={handleRejectTask}
+            onRequestRevision={handleRequestRevision}
+          />
+        )}
+
         {/* Create Listing Modal */}
         {showCreateListing && (
           <CreateListingModal
@@ -837,7 +1082,7 @@ export default function App() {
           />
         )}
 
-        <HelpChat userName={user.name} />
+        <HelpChat userName={user.name} userRole={user.userType} />
       </div>
     );
   }
@@ -854,7 +1099,7 @@ export default function App() {
             onVerificationClick={() => setCurrentView('verification')}
           />
         </div>
-        <HelpChat userName={user.name} />
+        <HelpChat userName={user.name} userRole={user.userType} />
       </div>
     );
   }
@@ -881,13 +1126,13 @@ export default function App() {
         <div className="flex-1 overflow-hidden">
           <AccountSettings user={user} onPhotoChange={handlePhotoChange} onUpdateProfile={handleUpdateProfile} />
         </div>
-        <HelpChat userName={user.name} />
+        <HelpChat userName={user.name} userRole={user.userType} />
       </div>
     );
   }
 
-  // Participant views (search, saved, messages, reservations, profile, account)
-  if ((currentView === 'search' || currentView === 'saved' || currentView === 'messages' || currentView === 'reservations' || currentView === 'account' || currentView === 'job-offers') && user?.userType === 'participant') {
+  // Participant views (search, saved, messages, reservations, profile, account, services)
+  if ((currentView === 'search' || currentView === 'saved' || currentView === 'messages' || currentView === 'reservations' || currentView === 'account' || currentView === 'job-offers' || currentView === 'services' || currentView === 'tasks') && user?.userType === 'participant') {
     const savedListings = housings.filter(h => savedListingIds.includes(h.id));
     const savedJobs = jobs.filter(j => savedJobIds.includes(j.id));
 
@@ -920,7 +1165,7 @@ export default function App() {
                   </svg>
                 </div>
               </div>
-              <div>
+              <div onClick={handleLogoClick} className="cursor-pointer">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent tracking-wide">VOYA LINK</h1>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-wider uppercase">Your Journey Starts Here</p>
               </div>
@@ -1072,6 +1317,51 @@ export default function App() {
                   </span>
                 )}
               </button>
+
+              <button
+                onClick={() => setCurrentView('tasks')}
+                className={`group relative flex flex-col items-center gap-1.5 px-4 py-2.5 transition-all ${
+                  currentView === 'tasks'
+                    ? 'text-primary'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <div className={`relative transition-transform group-hover:scale-110 ${
+                  currentView === 'tasks' ? 'scale-110' : ''
+                }`}>
+                  <CheckSquare className="w-4.5 h-4.5" />
+                </div>
+                <span className="text-[11px] font-semibold tracking-wide">Tasks</span>
+                {currentView === 'tasks' && (
+                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-12 h-1 bg-gradient-to-r from-primary to-purple-600 rounded-full shadow-lg"></div>
+                )}
+                {tasks.filter(t => t.status === 'open').length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-green-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">
+                    {tasks.filter(t => t.status === 'open').length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setCurrentView('services')}
+                className={`group relative flex flex-col items-center gap-1.5 px-4 py-2.5 transition-all ${
+                  currentView === 'services'
+                    ? 'text-primary'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <div className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all ${
+                  currentView === 'services'
+                    ? 'bg-gradient-to-br from-primary/10 to-purple-500/10 shadow-inner'
+                    : 'group-hover:bg-slate-100 dark:group-hover:bg-slate-800'
+                }`}>
+                  <Star className="w-4.5 h-4.5" />
+                </div>
+                <span className="text-[11px] font-semibold tracking-wide">Services</span>
+                {currentView === 'services' && (
+                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-12 h-1 bg-gradient-to-r from-primary to-purple-600 rounded-full shadow-lg"></div>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -1130,6 +1420,60 @@ export default function App() {
           )}
           {currentView === 'reservations' && (
             <Reservations userName={user.name} onOpenCase={handleOpenCase} />
+          )}
+          {currentView === 'tasks' && (
+            <TaskCenter
+              viewMode="participant"
+              tasks={tasks}
+              onSelectTask={(taskId) => {
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                  setSelectedTask(task);
+                  setShowTaskDetail(true);
+                }
+              }}
+            />
+          )}
+
+          {currentView === 'services' && (
+            <div className="h-full overflow-y-auto">
+              <ServiceHub
+                onBecomeProvider={() => {
+                  if (userIsProvider) {
+                    setCurrentView('providerDashboard');
+                  } else {
+                    setShowBecomeProvider(true);
+                  }
+                }}
+                onSelectService={(serviceId) => {
+                  // Mock service data - would come from backend
+                  setSelectedService({
+                    id: serviceId,
+                    category: 'airport_transfers',
+                    title: 'Charleston Airport Transfer',
+                    description: 'Comfortable transfer service with experienced driver',
+                    price: '$45',
+                    location: 'Charleston, SC',
+                    provider: {
+                      id: '1',
+                      name: 'John Driver',
+                      type: 'individual',
+                      rating: 4.8,
+                      reviewCount: 24,
+                      verified: true,
+                    },
+                    photos: [],
+                    status: 'active',
+                    createdAt: '2026-05-01',
+                    pickupLocation: 'Charleston Airport',
+                    dropoffLocation: 'Myrtle Beach',
+                    vehicleType: 'SUV',
+                    seatsAvailable: 4,
+                  });
+                  setShowServiceDetail(true);
+                }}
+              />
+            </div>
           )}
           {currentView === 'search' && (
             <div className="h-full flex flex-col">
@@ -1402,7 +1746,109 @@ export default function App() {
           />
         )}
 
-        <HelpChat userName={user.name} />
+        {/* Become Provider Modal */}
+        {showBecomeProvider && (
+          <BecomeProviderModal
+            onClose={() => setShowBecomeProvider(false)}
+            onSubmit={(application: ProviderApplication) => {
+              console.log('Provider application submitted:', application);
+              setShowBecomeProvider(false);
+              setUserIsProvider(true);
+              // Optionally switch to provider dashboard after approval
+            }}
+          />
+        )}
+
+        {/* Service Detail Modal */}
+        {showServiceDetail && selectedService && (
+          <ServiceDetailModal
+            listing={selectedService}
+            onClose={() => {
+              setShowServiceDetail(false);
+              setSelectedService(null);
+            }}
+            onBook={(listingId, details) => {
+              console.log('Booking service:', listingId, details);
+              setShowServiceDetail(false);
+            }}
+            onJoin={(listingId) => {
+              console.log('Joining service:', listingId);
+              setShowServiceDetail(false);
+            }}
+            onContact={(providerId) => {
+              console.log('Contacting provider:', providerId);
+            }}
+            onReport={(listingId) => {
+              console.log('Reporting service:', listingId);
+            }}
+            onShare={(listingId) => {
+              console.log('Sharing service:', listingId);
+            }}
+          />
+        )}
+
+        {/* Task Modals */}
+        {showTaskDetail && selectedTask && (
+          <TaskDetailModal
+            task={selectedTask}
+            viewMode="participant"
+            onClose={() => {
+              setShowTaskDetail(false);
+              setSelectedTask(null);
+            }}
+            onAccept={handleAcceptTask}
+            onDecline={(taskId) => {
+              setShowTaskDetail(false);
+              setSelectedTask(null);
+            }}
+            onSubmitCompletion={(taskId) => {
+              setShowTaskDetail(false);
+              setShowUploadProof(true);
+            }}
+            onAskQuestion={(taskId, question) => {
+              console.log('Question for task:', taskId, question);
+            }}
+          />
+        )}
+
+        {showUploadProof && selectedTask && (
+          <UploadProofModal
+            taskId={selectedTask.id}
+            taskTitle={selectedTask.title}
+            onClose={() => setShowUploadProof(false)}
+            onSubmit={(proof) => {
+              handleSubmitProof(selectedTask.id, proof);
+              setShowUploadProof(false);
+              setSelectedTask(null);
+            }}
+          />
+        )}
+
+        {showRewardSelection && pendingRewardTask && (
+          <RewardSelectionModal
+            taskTitle={pendingRewardTask.title}
+            rewardAmount={pendingRewardTask.rewardAmount}
+            onClose={() => {
+              setShowRewardSelection(false);
+              setPendingRewardTask(null);
+            }}
+            onCashOut={handleCashOut}
+            onSupportCause={handleSupportCause}
+          />
+        )}
+
+        {showGoodCauseSelection && pendingRewardTask && (
+          <GoodCauseSelectionModal
+            rewardAmount={pendingRewardTask.rewardAmount}
+            onClose={() => {
+              setShowGoodCauseSelection(false);
+              setPendingRewardTask(null);
+            }}
+            onConfirm={handleConfirmCause}
+          />
+        )}
+
+        <HelpChat userName={user.name} userRole={user.userType} />
       </div>
     );
   }
@@ -1417,7 +1863,7 @@ export default function App() {
           availableSpaces={selectedHousing.maxCapacity ? getAvailableSpaces(selectedHousing.id) : undefined}
           onCheckAvailability={(startDate, endDate) => checkAvailability(selectedHousing.id, startDate, endDate)}
         />
-        <HelpChat userName={user?.name} />
+        <HelpChat userName={user?.name} userRole={user?.userType} />
       </div>
     );
   }
@@ -1443,7 +1889,7 @@ export default function App() {
             onDecline={handleAgreementDecline}
           />
         )}
-        <HelpChat userName={user?.name} />
+        <HelpChat userName={user?.name} userRole={user?.userType} />
       </div>
     );
   }
@@ -1458,7 +1904,42 @@ export default function App() {
           isSaved={savedJobIds.includes(selectedJob.id)}
           onToggleSave={user?.userType === 'participant' ? () => handleToggleSaveJob(selectedJob.id) : undefined}
         />
-        <HelpChat userName={user?.name} />
+        <HelpChat userName={user?.name} userRole={user?.userType} />
+      </div>
+    );
+  }
+
+  // Provider Dashboard view
+  if (currentView === 'providerDashboard' && userIsProvider && user?.userType === 'participant') {
+    return (
+      <div className="h-screen bg-background flex flex-col">
+        <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between z-10">
+          <button
+            onClick={() => setCurrentView('services')}
+            className="text-sm text-primary hover:underline flex items-center gap-2"
+          >
+            ← Back to Services
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-lg"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="text-sm">Logout</span>
+          </button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <ProviderDashboard
+            providerId={user?.id || '1'}
+            onCreateService={() => {
+              console.log('Create service clicked');
+            }}
+            onEditService={(serviceId) => {
+              console.log('Edit service:', serviceId);
+            }}
+          />
+        </div>
+        <HelpChat userName={user?.name} userRole={user?.userType} />
       </div>
     );
   }
@@ -1480,11 +1961,30 @@ export default function App() {
                 </svg>
               </div>
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent tracking-wide leading-none">VOYA LINK</h1>
+            <div className="flex flex-col" onClick={handleLogoClick}>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent tracking-wide leading-none cursor-pointer">VOYA LINK</h1>
               <p className="text-[9px] text-slate-500 dark:text-slate-400 font-medium tracking-wider uppercase mt-0.5">Your Journey Starts Here</p>
             </div>
           </div>
+
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#services" className="text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-medium transition-colors flex items-center gap-2">
+              <Star className="w-4 h-4" />
+              Services
+            </a>
+            <a href="#how-it-works" className="text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-medium transition-colors">
+              How It Works
+            </a>
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-medium transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Become a Provider
+            </button>
+          </div>
+
           <button
             onClick={() => setShowAuthModal(true)}
             className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-primary to-purple-600 text-white rounded-lg hover:shadow-lg hover:shadow-primary/25 transition-all hover:scale-105 active:scale-95 font-medium text-sm"
@@ -1519,8 +2019,158 @@ export default function App() {
         </div>
       </section>
 
+      {/* Service Hub Section - Redesigned */}
+      <section id="services" className="relative py-24 overflow-hidden">
+        {/* Background Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 dark:from-purple-950/30 dark:via-pink-950/30 dark:to-orange-950/30"></div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-orange-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
+
+        <div className="relative max-w-7xl mx-auto px-6">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-sm font-bold mb-6 shadow-lg">
+              <Star className="w-4 h-4" />
+              <span>NEW: Service Hub</span>
+              <Star className="w-4 h-4" />
+            </div>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent leading-tight">
+              Everything You Need<br />Beyond Housing & Jobs
+            </h2>
+            <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto leading-relaxed">
+              Access essential services, connect with the community, discover exclusive student discounts, and make your J1 experience unforgettable
+            </p>
+          </div>
+
+          {/* Service Categories Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            {/* Airport Transfers */}
+            <div className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-2 border-purple-100 dark:border-purple-900 hover:border-purple-300 dark:hover:border-purple-700">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform">
+                <Car className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Airport Transfers</h3>
+              <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">Safe rides from airport to your accommodation</p>
+              <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-semibold text-sm">
+                <span>32+ services</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Events & Trips */}
+            <div className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-2 border-pink-100 dark:border-pink-900 hover:border-pink-300 dark:hover:border-pink-700">
+              <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform">
+                <Users className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Events & Trips</h3>
+              <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">Join group trips and social activities</p>
+              <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400 font-semibold text-sm">
+                <span>50+ events</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Student Discounts */}
+            <div className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-2 border-orange-100 dark:border-orange-900 hover:border-orange-300 dark:hover:border-orange-700">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform">
+                <Gift className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Student Discounts</h3>
+              <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">Exclusive deals and special offers</p>
+              <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-semibold text-sm">
+                <span>45+ offers</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Essential Services */}
+            <div className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-2 border-blue-100 dark:border-blue-900 hover:border-blue-300 dark:hover:border-blue-700">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform">
+                <FileText className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Essential Services</h3>
+              <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">Tax help, SIM cards, bedding & more</p>
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                <span>80+ services</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </div>
+
+          {/* CTA Section */}
+          <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 rounded-3xl p-8 md:p-12 shadow-2xl overflow-hidden">
+            {/* Decorative Pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute inset-0" style={{
+                backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+                backgroundSize: '32px 32px'
+              }}></div>
+            </div>
+
+            <div className="relative grid md:grid-cols-2 gap-8 items-center">
+              <div className="text-white">
+                <h3 className="text-3xl md:text-4xl font-bold mb-4">Ready to Explore?</h3>
+                <p className="text-white/90 text-lg mb-6">Browse hundreds of services, events, and exclusive offers tailored for J1 students and seasonal workers</p>
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-white/90">Verified providers & trusted reviews</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-white/90">Secure in-platform messaging</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-white/90">Community-driven events & trips</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="group relative bg-white text-purple-600 px-8 py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3"
+                >
+                  <Star className="w-6 h-6" />
+                  <span>Browse All Services</span>
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="group relative bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/20 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3"
+                >
+                  <Plus className="w-6 h-6" />
+                  <span>Become a Provider</span>
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                <p className="text-white/80 text-sm text-center">
+                  Join <span className="font-bold">500+</span> providers helping students succeed
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works - Three User Types */}
-      <section className="bg-white dark:bg-slate-900 py-20">
+      <section id="how-it-works" className="bg-white dark:bg-slate-900 py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900 dark:text-white">
@@ -1701,6 +2351,80 @@ export default function App() {
         </div>
       </section>
 
+      {/* Service Hub Section */}
+      <section id="services" className="bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 py-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <div className="inline-block mb-4">
+              <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-full text-sm font-semibold">
+                ✨ New: Service Hub
+              </span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 text-white">
+              Beyond Housing & Jobs
+            </h2>
+            <p className="text-lg text-white/90 max-w-3xl mx-auto mb-8">
+              Access essential services, local support, discounts, and community events to make your J1 experience unforgettable
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
+                <Car className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-white mb-2">Airport Transfers</h3>
+              <p className="text-sm text-white/80">Get picked up from the airport and transported safely to your accommodation</p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-white mb-2">Group Trips & Events</h3>
+              <p className="text-sm text-white/80">Join trips and social events organized by students and local providers</p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
+                <Gift className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-white mb-2">Student Discounts</h3>
+              <p className="text-sm text-white/80">Save money with exclusive discounts from local businesses and partners</p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-white mb-2">Essential Services</h3>
+              <p className="text-sm text-white/80">Tax help, SIM cards, bedding kits, cleaning, and more essential services</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-4 justify-center">
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="group relative overflow-hidden bg-white text-purple-600 px-8 py-4 rounded-xl text-lg font-semibold hover:shadow-2xl transition-all hover:scale-105 active:scale-95"
+            >
+              <span className="relative flex items-center gap-2">
+                <Star className="w-5 h-5" />
+                Browse Services
+              </span>
+            </button>
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="group relative overflow-hidden bg-white/20 backdrop-blur-sm border-2 border-white/40 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white/30 transition-all hover:scale-105 active:scale-95"
+            >
+              <span className="relative flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Become a Provider
+              </span>
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Deposit Protection Section */}
       <section className="max-w-7xl mx-auto px-6 py-20">
         <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 rounded-3xl border-2 border-blue-200 dark:border-blue-800 p-8 md:p-12">
@@ -1823,7 +2547,7 @@ export default function App() {
         />
       )}
 
-      <HelpChat userName={user?.name} />
+      <HelpChat userName={user?.name} userRole={user?.userType} isPublic={!user} />
     </div>
   );
 }

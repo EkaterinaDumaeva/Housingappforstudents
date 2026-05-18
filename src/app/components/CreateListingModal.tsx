@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Upload, MapPin, Home, Users, DollarSign, Image as ImageIcon, Trash2, CheckCircle, Calendar } from 'lucide-react';
+import { RoomManagement, Room, Bathroom } from './RoomManagement';
 
 interface CreateListingModalProps {
   onClose: () => void;
@@ -15,10 +16,13 @@ export interface NewListing {
     zipCode: string;
     country: string;
   };
+  propertyType: 'entire_house' | 'apartment' | 'private_room' | 'shared_room' | 'bed_in_shared' | 'multiple_rooms';
   genderPreference: 'female-only' | 'male-only' | 'mixed';
   roomType: 'Whole Apartment' | 'Private Room' | 'Shared Room';
   peopleInRoom: number;
   peopleInHouse: number;
+  rooms: Room[];
+  bathrooms: Bathroom[];
   price: number;
   pricePer: 'week' | 'month' | 'biweekly';
   deposit: {
@@ -81,10 +85,13 @@ export function CreateListingModal({ onClose, onSubmit }: CreateListingModalProp
       zipCode: '',
       country: 'USA'
     },
+    propertyType: 'apartment',
     genderPreference: 'mixed',
     roomType: 'Private Room',
     peopleInRoom: 1,
     peopleInHouse: 1,
+    rooms: [],
+    bathrooms: [],
     price: 0,
     pricePer: 'month',
     deposit: {
@@ -161,7 +168,14 @@ export function CreateListingModal({ onClose, onSubmit }: CreateListingModalProp
     onClose();
   };
 
-  const nextStep = () => setStep(step + 1);
+  const nextStep = () => {
+    // Validate step 2: require at least one room
+    if (step === 2 && formData.rooms.length === 0) {
+      alert('Please add at least one room before continuing');
+      return;
+    }
+    setStep(step + 1);
+  };
   const prevStep = () => setStep(step - 1);
 
   return (
@@ -173,7 +187,7 @@ export function CreateListingModal({ onClose, onSubmit }: CreateListingModalProp
             <h2 className="text-2xl font-bold">Create New Listing</h2>
             <p className="text-sm text-white/90 mt-1">Step {step} of 5 - {
               step === 1 ? 'Basic Information' :
-              step === 2 ? 'Property Details' :
+              step === 2 ? 'Rooms & Bathrooms' :
               step === 3 ? 'Pricing & Deposit' :
               step === 4 ? 'Amenities & Features' :
               'Photos & Final Details'
@@ -316,25 +330,28 @@ export function CreateListingModal({ onClose, onSubmit }: CreateListingModalProp
               </div>
             )}
 
-            {/* Step 2: Property Details */}
+            {/* Step 2: Rooms & Bathrooms */}
             {step === 2 && (
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-3">
-                    Gender Preference <span className="text-red-500">*</span>
+                    Property Type <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {[
-                      { value: 'female-only' as const, label: 'Female Only', icon: '👩' },
-                      { value: 'male-only' as const, label: 'Male Only', icon: '👨' },
-                      { value: 'mixed' as const, label: 'Mixed', icon: '👥' }
+                      { value: 'entire_house' as const, label: 'Entire House', icon: '🏠' },
+                      { value: 'apartment' as const, label: 'Apartment', icon: '🏢' },
+                      { value: 'private_room' as const, label: 'Private Room', icon: '🚪' },
+                      { value: 'shared_room' as const, label: 'Shared Room', icon: '🛏️' },
+                      { value: 'bed_in_shared' as const, label: 'Bed in Shared', icon: '🛌' },
+                      { value: 'multiple_rooms' as const, label: 'Multiple Rooms', icon: '🏘️' }
                     ].map((option) => (
                       <button
                         key={option.value}
                         type="button"
-                        onClick={() => setFormData({ ...formData, genderPreference: option.value })}
+                        onClick={() => setFormData({ ...formData, propertyType: option.value })}
                         className={`p-4 rounded-xl border-2 transition-all ${
-                          formData.genderPreference === option.value
+                          formData.propertyType === option.value
                             ? 'border-primary bg-primary/10 shadow-lg'
                             : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
                         }`}
@@ -344,124 +361,33 @@ export function CreateListingModal({ onClose, onSubmit }: CreateListingModalProp
                       </button>
                     ))}
                   </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                    Select the property type that best describes your listing
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-3">
-                    Room Type <span className="text-red-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {[
-                      { value: 'Whole Apartment' as const, label: 'Whole Apartment', icon: '🏠' },
-                      { value: 'Private Room' as const, label: 'Private Room', icon: '🚪' },
-                      { value: 'Shared Room' as const, label: 'Shared Room', icon: '🛏️' }
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, roomType: option.value })}
-                        className={`p-4 rounded-xl border-2 transition-all ${
-                          formData.roomType === option.value
-                            ? 'border-primary bg-primary/10 shadow-lg'
-                            : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        <div className="text-3xl mb-2">{option.icon}</div>
-                        <div className="text-sm font-semibold text-slate-900 dark:text-white">{option.label}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+                    Room Details & Bathroom Information
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                    Add detailed information about each room and bathroom. This helps participants understand capacity, gender policies, and bathroom sharing arrangements.
+                  </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
-                      Number of People in Room <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input
-                        type="number"
-                        value={formData.peopleInRoom}
-                        onChange={(e) => setFormData({ ...formData, peopleInRoom: parseInt(e.target.value) || 0 })}
-                        min="1"
-                        max="10"
-                        required
-                        className="w-full pl-11 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
+                  <RoomManagement
+                    rooms={formData.rooms}
+                    bathrooms={formData.bathrooms}
+                    onUpdateRooms={(rooms) => setFormData({ ...formData, rooms })}
+                    onUpdateBathrooms={(bathrooms) => setFormData({ ...formData, bathrooms })}
+                  />
+
+                  {formData.rooms.length === 0 && (
+                    <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <p className="text-sm text-amber-800 dark:text-amber-200">
+                        ⚠️ Please add at least one room to continue
+                      </p>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
-                      Number of People in House <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input
-                        type="number"
-                        value={formData.peopleInHouse}
-                        onChange={(e) => setFormData({ ...formData, peopleInHouse: parseInt(e.target.value) || 0 })}
-                        min="1"
-                        max="20"
-                        required
-                        className="w-full pl-11 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
-                      Minimum Stay <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={formData.minStay}
-                      onChange={(e) => setFormData({ ...formData, minStay: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option>1 week</option>
-                      <option>2 weeks</option>
-                      <option>1 month</option>
-                      <option>2 months</option>
-                      <option>3 months</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
-                      Maximum Stay <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={formData.maxStay}
-                      onChange={(e) => setFormData({ ...formData, maxStay: e.target.value })}
-                      className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option>1 month</option>
-                      <option>3 months</option>
-                      <option>6 months</option>
-                      <option>1 year</option>
-                      <option>No limit</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
-                    Availability <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.availability}
-                    onChange={(e) => setFormData({ ...formData, availability: e.target.value })}
-                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option>Available Now</option>
-                    <option>Available from June</option>
-                    <option>Available from July</option>
-                    <option>Available from August</option>
-                    <option>Available from September</option>
-                  </select>
+                  )}
                 </div>
               </div>
             )}
