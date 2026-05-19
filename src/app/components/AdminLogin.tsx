@@ -1,12 +1,23 @@
 import { useState } from 'react';
 import { Shield, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
+interface AdminAccount {
+  id: string;
+  email: string;
+  password: string;
+  name: string;
+  createdAt: string;
+  createdBy: string;
+  isMaster: boolean;
+}
+
 interface AdminLoginProps {
   onLogin: (email: string, password: string) => void;
   onBack: () => void;
+  adminAccounts?: AdminAccount[];
 }
 
-export function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
+export function AdminLogin({ onLogin, onBack, adminAccounts = [] }: AdminLoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,11 +31,16 @@ export function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
       return;
     }
 
-    // Simple validation - in production this would authenticate via backend
-    if (email.includes('@') && password.length >= 6) {
+    // Validate against all admin accounts
+    const validAdmin = adminAccounts.find(
+      admin => admin.email.toLowerCase() === email.toLowerCase() && admin.password === password
+    );
+
+    if (validAdmin) {
+      setError('');
       onLogin(email, password);
     } else {
-      setError('Invalid credentials');
+      setError('Invalid admin credentials. Access denied.');
     }
   };
 

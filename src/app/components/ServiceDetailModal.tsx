@@ -12,6 +12,7 @@ interface ServiceDetailModalProps {
   onContact?: (providerId: string) => void;
   onReport?: (listingId: string) => void;
   onShare?: (listingId: string) => void;
+  onSaveOffer?: (listingId: string) => void;
   reviews?: ReviewData[];
 }
 
@@ -21,7 +22,7 @@ export interface BookingDetails {
   message?: string;
 }
 
-export function ServiceDetailModal({ listing, onClose, onBook, onJoin, onContact, onReport, onShare, reviews = [] }: ServiceDetailModalProps) {
+export function ServiceDetailModal({ listing, onClose, onBook, onJoin, onContact, onReport, onShare, onSaveOffer, reviews = [] }: ServiceDetailModalProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'reviews'>('overview');
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showBookingForm, setShowBookingForm] = useState(false);
@@ -95,7 +96,7 @@ export function ServiceDetailModal({ listing, onClose, onBook, onJoin, onContact
 
         {canSaveOffer() && (
           <button
-            onClick={() => {}}
+            onClick={() => onSaveOffer?.(listing.id)}
             className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-purple-500/50 transition-all"
           >
             Save Offer

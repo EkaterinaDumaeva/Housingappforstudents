@@ -1,0 +1,169 @@
+════════════════════════════════════════════════════════════════
+  REPLIT TRANSFER CHECKLIST - J1 Platform
+════════════════════════════════════════════════════════════════
+
+PRE-TRANSFER (5 min)
+════════════════════════════════════════════════════════════════
+☐ Create Supabase account at https://supabase.com
+☐ Create new Supabase project (wait ~2 min)
+☐ Copy Project ID from Settings → API
+☐ Copy anon public key from Settings → API  
+☐ Copy service_role key from Settings → API
+☐ Save credentials in a text file
+
+FILE TRANSFER (10 min)
+════════════════════════════════════════════════════════════════
+☐ Create new Repl on Replit.com
+☐ Upload entire j1-platform folder
+☐ Wait for Replit to load project
+☐ Open Shell in Replit
+
+☐ Delete Figma file:
+    rm __figma__entrypoint__.ts
+
+☐ Replace config files:
+    mv vite.config.replit.ts vite.config.ts
+    mv utils/supabase/info.replit.tsx utils/supabase/info.tsx
+
+☐ Verify files exist:
+    ls -la .replit replit.nix .gitignore
+
+ENVIRONMENT SETUP (5 min)
+════════════════════════════════════════════════════════════════
+☐ Click Secrets (🔒) tab in Replit
+☐ Add secret: VITE_SUPABASE_PROJECT_ID = [your-project-id]
+☐ Add secret: VITE_SUPABASE_ANON_KEY = [your-anon-key]
+☐ Add secret: SUPABASE_URL = https://[project-id].supabase.co
+☐ Add secret: SUPABASE_SERVICE_ROLE_KEY = [your-service-key]
+
+☐ Verify all 4 secrets are set (no typos!)
+
+DEPENDENCIES (5 min)
+════════════════════════════════════════════════════════════════
+☐ Run: npm install
+☐ Wait for ~50 packages to install
+☐ Check for errors (should be none)
+
+BACKEND DEPLOYMENT (15 min) - OPTIONAL FOR TESTING
+════════════════════════════════════════════════════════════════
+☐ Install Supabase CLI: npm install -g supabase
+☐ Login: supabase login (opens browser)
+☐ Link project: supabase link --project-ref [your-project-id]
+☐ Deploy functions: supabase functions deploy server
+☐ Test: curl https://[project-id].supabase.co/functions/v1/make-server-e7ac1efd/health
+☐ Should return: {"status":"ok"}
+
+RUN APPLICATION (2 min)
+════════════════════════════════════════════════════════════════
+☐ Run: npm run dev
+☐ Wait for "Ready" message
+☐ Click "Open in new tab" in Replit
+☐ App should load
+
+TESTING - FRONTEND (30 min)
+════════════════════════════════════════════════════════════════
+☐ Homepage loads without errors
+☐ Can navigate: Participants → Hosts → Employers → Services → Tasks
+☐ Dark mode toggle works
+☐ Responsive (resize browser window)
+☐ Search bar works
+☐ Filters open and work
+☐ Modals open correctly
+☐ No console errors (F12 → Console)
+
+TESTING - AUTHENTICATION (if backend deployed) (15 min)
+════════════════════════════════════════════════════════════════
+☐ Click "Sign Up"
+☐ Create test account
+☐ Verify sign up success
+☐ Login with credentials
+☐ Profile loads
+☐ Logout works
+☐ Login again (session should work)
+
+TESTING - DASHBOARDS (30 min)
+════════════════════════════════════════════════════════════════
+☐ Test Participant dashboard
+☐ Test Host dashboard  
+☐ Test Employer dashboard
+☐ Test Service Provider dashboard
+☐ Test Admin dashboard (if admin account created)
+
+TESTING - DATA PERSISTENCE (5 min)
+════════════════════════════════════════════════════════════════
+☐ Create a test listing/job
+☐ Refresh page
+☐ Data should still be there
+☐ No CORS errors in console
+
+PRODUCTION READINESS (optional)
+════════════════════════════════════════════════════════════════
+☐ Run: npm run build (test production build)
+☐ Upgrade to Replit Hacker plan ($7/mo)
+☐ Enable "Always On" in Replit
+☐ Run: npm run preview (test production mode)
+☐ Set up monitoring/alerts
+☐ Create backup strategy
+
+SECURITY CHECKLIST
+════════════════════════════════════════════════════════════════
+☐ All secrets in Replit Secrets tab (not in code)
+☐ No .env files committed to git
+☐ .gitignore includes .env and .env.local
+☐ Service role key never exposed to frontend
+☐ Only anon key used in client code
+☐ HTTPS enabled (automatic on Replit)
+
+TROUBLESHOOTING STEPS (if issues)
+════════════════════════════════════════════════════════════════
+If "Module not found":
+  ☐ rm -rf node_modules package-lock.json
+  ☐ npm install
+
+If "Port in use":
+  ☐ Change port in vite.config.ts (5173 → 5174)
+
+If "Supabase connection failed":
+  ☐ Check all 4 secrets are set
+  ☐ Verify no typos in secret names
+  ☐ Test: curl https://[project-id].supabase.co/functions/v1/make-server-e7ac1efd/health
+
+If build fails:
+  ☐ npm run build
+  ☐ Check TypeScript errors
+  ☐ Fix errors and retry
+
+If slow performance:
+  ☐ Upgrade to Replit Hacker plan
+  ☐ Enable "Always On"
+  ☐ Use production build
+
+FINAL VERIFICATION
+════════════════════════════════════════════════════════════════
+☐ App accessible at Replit URL
+☐ No errors in browser console
+☐ User can sign up/login (if backend deployed)
+☐ All navigation works
+☐ All modals open
+☐ Data persists
+☐ Responsive design works
+☐ Dark mode works
+
+SUCCESS! 🎉
+════════════════════════════════════════════════════════════════
+
+Your J1 Platform is now running on Replit with:
+✅ 130+ React components
+✅ Full authentication system
+✅ Multiple user dashboards
+✅ Admin panel
+✅ Service marketplace
+✅ Task center
+✅ Messaging system
+✅ And much more!
+
+For detailed documentation, see:
+- REPLIT_TRANSFER_AUDIT_V2.md (comprehensive guide)
+- QUICK_START_REPLIT.md (15-minute quick start)
+
+════════════════════════════════════════════════════════════════

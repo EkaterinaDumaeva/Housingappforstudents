@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SlidersHorizontal, Heart, User as UserIcon, LogOut, LayoutDashboard, Home, Search, MessageCircle, Bookmark, Calendar, Settings, Briefcase, Star, Building2, DollarSign, Clock, Shield, Car, Users, Gift, FileText, Plus, ChevronRight, CheckSquare, Trophy } from 'lucide-react';
+import { SlidersHorizontal, Heart, User as UserIcon, LogOut, LayoutDashboard, Home, Search, MessageCircle, Bookmark, Calendar, Settings, Briefcase, Star, Building2, DollarSign, Clock, Shield, Car, Users, Gift, FileText, Plus, ChevronRight, CheckSquare, Trophy, Scale, Eye } from 'lucide-react';
 import { SearchBar } from './components/SearchBar';
 import { HousingCard, Housing } from './components/HousingCard';
 import { HousingDetails } from './components/HousingDetails';
@@ -32,6 +32,7 @@ import { BecomeProviderModal, ProviderApplication } from './components/BecomePro
 import { ServiceDetailModal } from './components/ServiceDetailModal';
 import { ServiceListing } from './components/ServiceListingCard';
 import { ProviderDashboard } from './components/ProviderDashboard';
+import { ServiceProviderDashboard } from './components/ServiceProviderDashboard';
 import { TaskCenter } from './components/TaskCenter';
 import { CreateTaskModal, TaskData } from './components/CreateTaskModal';
 import { Task, TaskCard } from './components/TaskCard';
@@ -40,6 +41,7 @@ import { UploadProofModal } from './components/UploadProofModal';
 import { HostReviewTaskModal } from './components/HostReviewTaskModal';
 import { RewardSelectionModal } from './components/RewardSelectionModal';
 import { GoodCauseSelectionModal } from './components/GoodCauseSelectionModal';
+import { ServiceHubModal } from './components/ServiceHubModal';
 
 const initialMockHousings: Array<Housing & {
   description: string;
@@ -57,7 +59,7 @@ const initialMockHousings: Array<Housing & {
 // Mock job data
 const initialMockJobs: Job[] = [];
 
-type View = 'home' | 'details' | 'booking' | 'dashboard' | 'account' | 'verification' | 'search' | 'saved' | 'messages' | 'reservations' | 'jobDetails' | 'job-offers' | 'services' | 'providerDashboard' | 'tasks';
+type View = 'home' | 'details' | 'booking' | 'dashboard' | 'account' | 'verification' | 'search' | 'saved' | 'messages' | 'reservations' | 'jobDetails' | 'job-offers' | 'services' | 'providerDashboard' | 'tasks' | 'serviceProviderDashboard';
 type SearchMode = 'housing' | 'jobs';
 
 export default function App() {
@@ -116,11 +118,62 @@ export default function App() {
   const [adminUser, setAdminUser] = useState<User | null>(null);
   const [adminClickCount, setAdminClickCount] = useState(0);
 
+  // Admin accounts - centralized for login validation
+  const MASTER_ADMIN_EMAIL = 'ekaterinadumaeva@gmail.com';
+  const MASTER_ADMIN_PASSWORD = 'Rycbarm7006$';
+
+  const [adminAccounts, setAdminAccounts] = useState<Array<{
+    id: string;
+    email: string;
+    password: string;
+    name: string;
+    createdAt: string;
+    createdBy: string;
+    isMaster: boolean;
+  }>>([
+    {
+      id: 'admin-master',
+      email: MASTER_ADMIN_EMAIL,
+      password: MASTER_ADMIN_PASSWORD,
+      name: 'Ekaterina Dumaeva',
+      createdAt: new Date('2026-01-01').toISOString(),
+      createdBy: 'System',
+      isMaster: true
+    }
+  ]);
+
+  // Support chat states
+  interface ChatMessage {
+    id: string;
+    text: string;
+    sender: 'user' | 'bot' | 'admin';
+    timestamp: string;
+    isSystemMessage?: boolean;
+  }
+
+  interface SupportChat {
+    id: string;
+    userId: string | null;
+    userName: string;
+    userEmail: string;
+    userRole: 'participant' | 'host' | 'employer' | 'service-provider' | 'guest';
+    category: string;
+    status: 'active' | 'resolved' | 'pending';
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    messages: ChatMessage[];
+    createdAt: string;
+    lastMessageAt: string;
+    assignedAdmin?: string;
+  }
+
+  const [supportChats, setSupportChats] = useState<SupportChat[]>([]);
+
   // Service Hub states
   const [showBecomeProvider, setShowBecomeProvider] = useState(false);
   const [showServiceDetail, setShowServiceDetail] = useState(false);
   const [selectedService, setSelectedService] = useState<ServiceListing | null>(null);
   const [userIsProvider, setUserIsProvider] = useState(false); // Mock - would be determined by backend
+  const [showServiceHubModal, setShowServiceHubModal] = useState(false);
 
   // Task & Rewards states
   const [showCreateTask, setShowCreateTask] = useState(false);
@@ -416,11 +469,23 @@ export default function App() {
 
   // Admin handlers
   const handleAdminLogin = (email: string, password: string) => {
+    // Find the admin account
+    const adminAccount = adminAccounts.find(
+      admin => admin.email === email && admin.password === password
+    );
+
+    if (!adminAccount) {
+      console.error('Admin account not found');
+      return;
+    }
+
     // Create admin user object
     const admin: User = {
-      name: 'Admin User',
+      id: adminAccount.id,
+      name: adminAccount.name,
       email: email,
       userType: 'participant', // Use participant type to avoid conflicts
+      isVerified: true,
       profilePhoto: '',
       participantProfile: undefined,
       hostProfile: undefined
@@ -924,12 +989,94 @@ export default function App() {
     );
   };
 
+  // Admin create/delete handlers
+  const handleCreateAdmin = (newAdmin: Omit<typeof adminAccounts[0], 'id' | 'createdAt' | 'createdBy' | 'isMaster'>) => {
+    const adminAccount = {
+      id: `admin-${Date.now()}`,
+      ...newAdmin,
+      createdAt: new Date().toISOString(),
+      createdBy: adminUser?.email || 'Unknown',
+      isMaster: false
+    };
+
+    setAdminAccounts([...adminAccounts, adminAccount]);
+  };
+
+  const handleDeleteAdmin = (adminId: string) => {
+    setAdminAccounts(adminAccounts.filter(admin => admin.id !== adminId));
+  };
+
+  // Support chat handlers
+  const handleCreateSupportChat = (
+    userName: string,
+    userEmail: string,
+    userRole: 'participant' | 'host' | 'employer' | 'service-provider' | 'guest',
+    category: string,
+    initialMessage: string,
+    priority: 'low' | 'medium' | 'high' | 'critical'
+  ) => {
+    const chatId = `chat-${Date.now()}`;
+    const newChat: SupportChat = {
+      id: chatId,
+      userId: user?.email || null,
+      userName,
+      userEmail,
+      userRole,
+      category,
+      status: 'active',
+      priority,
+      messages: [
+        {
+          id: `msg-${Date.now()}`,
+          text: initialMessage,
+          sender: 'user',
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        }
+      ],
+      createdAt: new Date().toISOString(),
+      lastMessageAt: new Date().toISOString()
+    };
+    setSupportChats(prev => [newChat, ...prev]);
+    return chatId;
+  };
+
+  const handleAddChatMessage = (chatId: string, message: ChatMessage) => {
+    setSupportChats(prev => prev.map(chat => {
+      if (chat.id === chatId) {
+        return {
+          ...chat,
+          messages: [...chat.messages, message],
+          lastMessageAt: new Date().toISOString()
+        };
+      }
+      return chat;
+    }));
+  };
+
+  const handleUpdateChatStatus = (chatId: string, status: 'active' | 'resolved' | 'pending') => {
+    setSupportChats(prev => prev.map(chat =>
+      chat.id === chatId ? { ...chat, status } : chat
+    ));
+  };
+
+  const handleAssignChat = (chatId: string, adminEmail: string) => {
+    setSupportChats(prev => prev.map(chat =>
+      chat.id === chatId ? { ...chat, assignedAdmin: adminEmail } : chat
+    ));
+  };
+
+  // Find existing chat for current user
+  const userChat = user ? supportChats.find(chat => chat.userEmail === user.email) : null;
+  const guestChat = !user ? supportChats.find(chat => chat.userRole === 'guest') : null;
+  const currentChat = userChat || guestChat;
+
   // Admin mode interface
   if (adminMode === 'login') {
     return (
       <AdminLogin
         onLogin={handleAdminLogin}
         onBack={() => setAdminMode(null)}
+        adminAccounts={adminAccounts}
       />
     );
   }
@@ -938,6 +1085,13 @@ export default function App() {
     return (
       <AdminDashboard
         user={adminUser}
+        adminAccounts={adminAccounts}
+        onCreateAdmin={handleCreateAdmin}
+        onDeleteAdmin={handleDeleteAdmin}
+        supportChats={supportChats}
+        onAddChatMessage={handleAddChatMessage}
+        onUpdateChatStatus={handleUpdateChatStatus}
+        onAssignChat={handleAssignChat}
         onLogout={handleAdminLogout}
       />
     );
@@ -975,7 +1129,15 @@ export default function App() {
             />
           </div>
         </div>
-        <HelpChat userName={user.name} userRole={user.userType} />
+        <HelpChat
+          userName={user.name}
+          userEmail={user.email}
+          userRole={user.userType}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+          existingChatId={currentChat?.id}
+          existingMessages={currentChat?.messages}
+        />
       </div>
     );
   }
@@ -1002,7 +1164,15 @@ export default function App() {
         <div className="flex-1 overflow-hidden">
           <AccountSettings user={user} onPhotoChange={handlePhotoChange} onUpdateProfile={handleUpdateProfile} />
         </div>
-        <HelpChat userName={user.name} userRole={user.userType} />
+        <HelpChat
+          userName={user.name}
+          userEmail={user.email}
+          userRole={user.userType}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+          existingChatId={currentChat?.id}
+          existingMessages={currentChat?.messages}
+        />
       </div>
     );
   }
@@ -1082,7 +1252,15 @@ export default function App() {
           />
         )}
 
-        <HelpChat userName={user.name} userRole={user.userType} />
+        <HelpChat
+          userName={user.name}
+          userEmail={user.email}
+          userRole={user.userType}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+          existingChatId={currentChat?.id}
+          existingMessages={currentChat?.messages}
+        />
       </div>
     );
   }
@@ -1099,7 +1277,15 @@ export default function App() {
             onVerificationClick={() => setCurrentView('verification')}
           />
         </div>
-        <HelpChat userName={user.name} userRole={user.userType} />
+        <HelpChat
+          userName={user.name}
+          userEmail={user.email}
+          userRole={user.userType}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+          existingChatId={currentChat?.id}
+          existingMessages={currentChat?.messages}
+        />
       </div>
     );
   }
@@ -1126,7 +1312,15 @@ export default function App() {
         <div className="flex-1 overflow-hidden">
           <AccountSettings user={user} onPhotoChange={handlePhotoChange} onUpdateProfile={handleUpdateProfile} />
         </div>
-        <HelpChat userName={user.name} userRole={user.userType} />
+        <HelpChat
+          userName={user.name}
+          userEmail={user.email}
+          userRole={user.userType}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+          existingChatId={currentChat?.id}
+          existingMessages={currentChat?.messages}
+        />
       </div>
     );
   }
@@ -1752,9 +1946,23 @@ export default function App() {
             onClose={() => setShowBecomeProvider(false)}
             onSubmit={(application: ProviderApplication) => {
               console.log('Provider application submitted:', application);
+
+              // In production, this would send to backend for review
+              // For now, auto-approve and create service provider account
+              const serviceProviderUser: User = {
+                id: `provider-${Date.now()}`,
+                email: application.email,
+                name: application.fullName,
+                userType: 'service-provider',
+                isVerified: false,
+                profilePhoto: undefined
+              };
+
+              setUser(serviceProviderUser);
               setShowBecomeProvider(false);
-              setUserIsProvider(true);
-              // Optionally switch to provider dashboard after approval
+              setCurrentView('serviceProviderDashboard');
+
+              alert('🎉 Welcome to VOYA LINK Service Provider!\n\nYour application has been submitted. You can now start creating your services.\n\nYou will receive an email notification once your account is fully verified (typically 2-3 business days).');
             }}
           />
         )}
@@ -1768,21 +1976,45 @@ export default function App() {
               setSelectedService(null);
             }}
             onBook={(listingId, details) => {
-              console.log('Booking service:', listingId, details);
+              // Create booking confirmation
+              alert(`Service booked successfully!\n\nService: ${selectedService?.title}\nProvider: ${selectedService?.provider.name}\n\nYou'll receive a confirmation email shortly.`);
               setShowServiceDetail(false);
+              setSelectedService(null);
             }}
             onJoin={(listingId) => {
-              console.log('Joining service:', listingId);
+              // Join event/trip
+              alert(`You've joined this ${selectedService?.category === 'events' ? 'event' : 'trip'}!\n\n${selectedService?.title}\n\nCheck your email for details and updates.`);
               setShowServiceDetail(false);
+              setSelectedService(null);
             }}
             onContact={(providerId) => {
-              console.log('Contacting provider:', providerId);
+              // Open messaging - in real app would open message thread
+              alert(`Opening chat with ${selectedService?.provider.name}...\n\nIn the full version, this would open a secure messaging thread.`);
             }}
             onReport={(listingId) => {
-              console.log('Reporting service:', listingId);
+              // Report service
+              const reason = prompt('Please describe why you\'re reporting this listing:');
+              if (reason) {
+                alert('Thank you for your report. Our team will review this listing within 24 hours.');
+              }
             }}
             onShare={(listingId) => {
-              console.log('Sharing service:', listingId);
+              // Share service
+              const shareText = `Check out this service on VOYA LINK: ${selectedService?.title}`;
+              if (navigator.share) {
+                navigator.share({
+                  title: selectedService?.title,
+                  text: shareText,
+                  url: window.location.href
+                }).catch(() => {
+                  // Fallback to copy to clipboard
+                  navigator.clipboard.writeText(shareText);
+                  alert('Link copied to clipboard!');
+                });
+              } else {
+                navigator.clipboard.writeText(shareText);
+                alert('Link copied to clipboard!');
+              }
             }}
           />
         )}
@@ -1848,7 +2080,15 @@ export default function App() {
           />
         )}
 
-        <HelpChat userName={user.name} userRole={user.userType} />
+        <HelpChat
+          userName={user.name}
+          userEmail={user.email}
+          userRole={user.userType}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+          existingChatId={currentChat?.id}
+          existingMessages={currentChat?.messages}
+        />
       </div>
     );
   }
@@ -1863,7 +2103,13 @@ export default function App() {
           availableSpaces={selectedHousing.maxCapacity ? getAvailableSpaces(selectedHousing.id) : undefined}
           onCheckAvailability={(startDate, endDate) => checkAvailability(selectedHousing.id, startDate, endDate)}
         />
-        <HelpChat userName={user?.name} userRole={user?.userType} />
+        <HelpChat
+          userName={user?.name || 'Guest'}
+          userEmail={user?.email || 'guest@unknown'}
+          userRole={user?.userType || 'guest'}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+        />
       </div>
     );
   }
@@ -1889,7 +2135,13 @@ export default function App() {
             onDecline={handleAgreementDecline}
           />
         )}
-        <HelpChat userName={user?.name} userRole={user?.userType} />
+        <HelpChat
+          userName={user?.name || 'Guest'}
+          userEmail={user?.email || 'guest@unknown'}
+          userRole={user?.userType || 'guest'}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+        />
       </div>
     );
   }
@@ -1904,7 +2156,13 @@ export default function App() {
           isSaved={savedJobIds.includes(selectedJob.id)}
           onToggleSave={user?.userType === 'participant' ? () => handleToggleSaveJob(selectedJob.id) : undefined}
         />
-        <HelpChat userName={user?.name} userRole={user?.userType} />
+        <HelpChat
+          userName={user?.name || 'Guest'}
+          userEmail={user?.email || 'guest@unknown'}
+          userRole={user?.userType || 'guest'}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+        />
       </div>
     );
   }
@@ -1939,7 +2197,65 @@ export default function App() {
             }}
           />
         </div>
-        <HelpChat userName={user?.name} userRole={user?.userType} />
+        <HelpChat
+          userName={user?.name || 'Guest'}
+          userEmail={user?.email || 'guest@unknown'}
+          userRole={user?.userType || 'guest'}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+        />
+      </div>
+    );
+  }
+
+  // Service Provider Dashboard view
+  if (currentView === 'serviceProviderDashboard' && user?.userType === 'service-provider') {
+    return (
+      <div className="h-screen bg-background flex flex-col">
+        <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between z-10">
+          <div className="flex items-center gap-3">
+            <div className="relative group" onClick={handleLogoClick}>
+              <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-lg opacity-30 group-hover:opacity-50 transition-opacity rounded-full"></div>
+              <div className="relative bg-gradient-to-br from-primary to-purple-600 p-2 rounded-xl shadow-lg cursor-pointer">
+                <svg viewBox="0 0 80 80" className="w-8 h-8" fill="none">
+                  <path d="M20 15 L40 55 L60 15" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                  <circle cx="40" cy="20" r="8" fill="white" opacity="0.3"/>
+                  <circle cx="40" cy="20" r="3" fill="white"/>
+                </svg>
+              </div>
+            </div>
+            <div onClick={handleLogoClick} className="cursor-pointer">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent tracking-wide">VOYA LINK</h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-wider uppercase">Service Provider</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="text-sm">Logout</span>
+          </button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <ServiceProviderDashboard
+            providerId={user?.id || '1'}
+            providerName={user?.name || 'Provider'}
+            onCreateService={() => {
+              alert('Create Service form would open here.\n\nIn production, this would open a detailed form to create a new service listing with photos, pricing, availability, etc.');
+            }}
+            onEditService={(serviceId) => {
+              alert(`Edit Service ${serviceId} form would open here.\n\nIn production, this would open the service editor with pre-filled data.`);
+            }}
+          />
+        </div>
+        <HelpChat
+          userName={user?.name || 'Guest'}
+          userEmail={user?.email || 'guest@unknown'}
+          userRole={user?.userType || 'guest'}
+          onCreateChat={handleCreateSupportChat}
+          onAddMessage={handleAddChatMessage}
+        />
       </div>
     );
   }
@@ -1948,37 +2264,43 @@ export default function App() {
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-primary/5 dark:from-slate-950 dark:via-slate-900 dark:to-primary/5 overflow-y-auto">
       {/* Navigation Bar */}
-      <nav className="sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <nav className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 z-50 shadow-lg">
+        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={handleLogoClick}>
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-lg opacity-30 group-hover:opacity-50 transition-opacity rounded-full"></div>
-              <div className="relative bg-gradient-to-br from-primary to-purple-600 p-2 rounded-xl shadow-lg">
-                <svg viewBox="0 0 80 80" className="w-8 h-8" fill="none">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-lg opacity-40 group-hover:opacity-60 transition-opacity rounded-full"></div>
+              <div className="relative bg-gradient-to-br from-primary to-purple-600 p-2.5 rounded-xl shadow-lg">
+                <svg viewBox="0 0 80 80" className="w-9 h-9" fill="none">
                   <path d="M20 15 L40 55 L60 15" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
                   <circle cx="40" cy="20" r="8" fill="white" opacity="0.3"/>
                   <circle cx="40" cy="20" r="3" fill="white"/>
                 </svg>
               </div>
             </div>
-            <div className="flex flex-col" onClick={handleLogoClick}>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent tracking-wide leading-none cursor-pointer">VOYA LINK</h1>
-              <p className="text-[9px] text-slate-500 dark:text-slate-400 font-medium tracking-wider uppercase mt-0.5">Your Journey Starts Here</p>
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-extrabold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent tracking-wide leading-none">VOYA LINK</h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold tracking-wider uppercase mt-1">Your Journey Starts Here</p>
             </div>
           </div>
 
           {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#services" className="text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-medium transition-colors flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-6 lg:gap-8">
+            <button
+              onClick={() => setShowServiceHubModal(true)}
+              className="text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-semibold transition-colors flex items-center gap-2 text-sm lg:text-base"
+            >
               <Star className="w-4 h-4" />
               Services
-            </a>
-            <a href="#how-it-works" className="text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-medium transition-colors">
+            </button>
+            <a
+              href="#how-it-works"
+              className="text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-semibold transition-colors text-sm lg:text-base"
+            >
               How It Works
             </a>
             <button
-              onClick={() => setShowAuthModal(true)}
-              className="text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-medium transition-colors flex items-center gap-2"
+              onClick={() => setShowBecomeProvider(true)}
+              className="text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-semibold transition-colors flex items-center gap-2 text-sm lg:text-base"
             >
               <Plus className="w-4 h-4" />
               Become a Provider
@@ -1987,7 +2309,7 @@ export default function App() {
 
           <button
             onClick={() => setShowAuthModal(true)}
-            className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-primary to-purple-600 text-white rounded-lg hover:shadow-lg hover:shadow-primary/25 transition-all hover:scale-105 active:scale-95 font-medium text-sm"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-purple-600 text-white rounded-xl hover:shadow-xl hover:shadow-primary/30 transition-all hover:scale-105 active:scale-95 font-bold text-sm lg:text-base"
           >
             <UserIcon className="w-4 h-4" />
             <span>Get Started</span>
@@ -1996,188 +2318,51 @@ export default function App() {
       </nav>
 
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-6 py-16 md:py-24">
-        <div className="text-center max-w-4xl mx-auto">
-          <div className="inline-block mb-6">
-            <span className="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-semibold">
+      <section className="max-w-7xl mx-auto px-6 py-20 md:py-32">
+        <div className="text-center max-w-5xl mx-auto">
+          <div className="inline-block mb-8 animate-fade-in">
+            <span className="px-5 py-2.5 bg-gradient-to-r from-primary/10 to-purple-600/10 border border-primary/20 text-primary rounded-full text-sm font-semibold shadow-sm">
               🌎 Connecting J1 Students & Seasonal Workers Worldwide
             </span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-slate-900 via-primary to-purple-600 dark:from-white dark:via-primary dark:to-purple-400 bg-clip-text text-transparent leading-tight">
-            Find Your Perfect Housing<br />& Employment Match
+          <h1 className="text-5xl md:text-7xl font-extrabold mb-8 bg-gradient-to-r from-slate-900 via-primary to-purple-600 dark:from-white dark:via-primary dark:to-purple-400 bg-clip-text text-transparent leading-tight tracking-tight">
+            Find Your Perfect<br />Housing & Jobs
           </h1>
-          <p className="text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed">
-            The all-in-one platform connecting international students and seasonal workers with trusted housing providers and employers across the United States
+          <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 mb-12 leading-relaxed max-w-3xl mx-auto font-medium">
+            The trusted platform connecting international students and seasonal workers with verified housing and employment opportunities
           </p>
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="group relative overflow-hidden bg-gradient-to-r from-primary via-purple-600 to-purple-700 text-white px-8 py-4 rounded-2xl text-lg font-semibold hover:shadow-2xl hover:shadow-primary/25 transition-all hover:scale-105 active:scale-95"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
-            <span className="relative">Start Your Journey Today</span>
-          </button>
-        </div>
-      </section>
-
-      {/* Service Hub Section - Redesigned */}
-      <section id="services" className="relative py-24 overflow-hidden">
-        {/* Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 dark:from-purple-950/30 dark:via-pink-950/30 dark:to-orange-950/30"></div>
-
-        {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-orange-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
-
-        <div className="relative max-w-7xl mx-auto px-6">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-sm font-bold mb-6 shadow-lg">
-              <Star className="w-4 h-4" />
-              <span>NEW: Service Hub</span>
-              <Star className="w-4 h-4" />
-            </div>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent leading-tight">
-              Everything You Need<br />Beyond Housing & Jobs
-            </h2>
-            <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto leading-relaxed">
-              Access essential services, connect with the community, discover exclusive student discounts, and make your J1 experience unforgettable
-            </p>
-          </div>
-
-          {/* Service Categories Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            {/* Airport Transfers */}
-            <div className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-2 border-purple-100 dark:border-purple-900 hover:border-purple-300 dark:hover:border-purple-700">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform">
-                <Car className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Airport Transfers</h3>
-              <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">Safe rides from airport to your accommodation</p>
-              <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-semibold text-sm">
-                <span>32+ services</span>
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-            {/* Events & Trips */}
-            <div className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-2 border-pink-100 dark:border-pink-900 hover:border-pink-300 dark:hover:border-pink-700">
-              <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform">
-                <Users className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Events & Trips</h3>
-              <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">Join group trips and social activities</p>
-              <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400 font-semibold text-sm">
-                <span>50+ events</span>
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-            {/* Student Discounts */}
-            <div className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-2 border-orange-100 dark:border-orange-900 hover:border-orange-300 dark:hover:border-orange-700">
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform">
-                <Gift className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Student Discounts</h3>
-              <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">Exclusive deals and special offers</p>
-              <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-semibold text-sm">
-                <span>45+ offers</span>
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-            {/* Essential Services */}
-            <div className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-2 border-blue-100 dark:border-blue-900 hover:border-blue-300 dark:hover:border-blue-700">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform">
-                <FileText className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Essential Services</h3>
-              <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">Tax help, SIM cards, bedding & more</p>
-              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                <span>80+ services</span>
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          </div>
-
-          {/* CTA Section */}
-          <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 rounded-3xl p-8 md:p-12 shadow-2xl overflow-hidden">
-            {/* Decorative Pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute inset-0" style={{
-                backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-                backgroundSize: '32px 32px'
-              }}></div>
-            </div>
-
-            <div className="relative grid md:grid-cols-2 gap-8 items-center">
-              <div className="text-white">
-                <h3 className="text-3xl md:text-4xl font-bold mb-4">Ready to Explore?</h3>
-                <p className="text-white/90 text-lg mb-6">Browse hundreds of services, events, and exclusive offers tailored for J1 students and seasonal workers</p>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <span className="text-white/90">Verified providers & trusted reviews</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <span className="text-white/90">Secure in-platform messaging</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <span className="text-white/90">Community-driven events & trips</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <button
-                  onClick={() => setShowAuthModal(true)}
-                  className="group relative bg-white text-purple-600 px-8 py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3"
-                >
-                  <Star className="w-6 h-6" />
-                  <span>Browse All Services</span>
-                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
-
-                <button
-                  onClick={() => setShowAuthModal(true)}
-                  className="group relative bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/20 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3"
-                >
-                  <Plus className="w-6 h-6" />
-                  <span>Become a Provider</span>
-                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
-
-                <p className="text-white/80 text-sm text-center">
-                  Join <span className="font-bold">500+</span> providers helping students succeed
-                </p>
-              </div>
-            </div>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="group relative overflow-hidden bg-gradient-to-r from-primary via-purple-600 to-purple-700 text-white px-10 py-5 rounded-2xl text-lg font-bold hover:shadow-2xl hover:shadow-primary/30 transition-all hover:scale-105 active:scale-95 min-w-[240px]"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+              <span className="relative">Get Started Free</span>
+            </button>
+            <a
+              href="#how-it-works"
+              className="group px-10 py-5 border-2 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl text-lg font-bold hover:border-primary hover:text-primary dark:hover:border-primary dark:hover:text-primary transition-all hover:scale-105 active:scale-95 min-w-[240px]"
+            >
+              Learn How It Works
+            </a>
           </div>
         </div>
       </section>
 
       {/* How It Works - Three User Types */}
-      <section id="how-it-works" className="bg-white dark:bg-slate-900 py-20">
+      <section id="how-it-works" className="bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 py-24">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900 dark:text-white">
+          <div className="text-center mb-20">
+            <div className="inline-block mb-4">
+              <span className="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-semibold">
+                Simple & Secure
+              </span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-extrabold mb-6 text-slate-900 dark:text-white">
               How VOYA LINK Works
             </h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-              Choose your role and discover how VOYA LINK connects you
+            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
+              Choose your path and start your journey today
             </p>
           </div>
 
@@ -2305,118 +2490,95 @@ export default function App() {
         </div>
       </section>
 
-      {/* Why Choose VOYA LINK */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900 dark:text-white">
-            Why Choose VOYA LINK?
-          </h2>
-          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            We make finding housing and employment simple and secure
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-          <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-lg transition-shadow h-full">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="font-bold mb-2 text-slate-900 dark:text-white">Secure Deposit Escrow</h3>
-            <p className="text-sm text-slate-700 dark:text-slate-300">80% of your deposit held safely on our platform. Protected until move-out or refunded if host violates terms</p>
-          </div>
-
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-shadow h-full">
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-              <Calendar className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="font-bold mb-2 text-slate-900 dark:text-white">Flexible Booking</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">Book housing for your exact dates - from a few weeks to several months</p>
-          </div>
-
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-shadow h-full">
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-              <MessageCircle className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="font-bold mb-2 text-slate-900 dark:text-white">24/7 Support</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">Get help whenever you need it with our dedicated support team</p>
-          </div>
-
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-shadow h-full">
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-              <Star className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="font-bold mb-2 text-slate-900 dark:text-white">Trusted Reviews</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">Read real reviews from students and workers who've been there</p>
-          </div>
-        </div>
-      </section>
-
       {/* Service Hub Section */}
-      <section id="services" className="bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <div className="inline-block mb-4">
-              <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-full text-sm font-semibold">
-                ✨ New: Service Hub
+      <section id="services" className="relative bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 py-24 overflow-hidden">
+        {/* Decorative Background */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+            backgroundSize: '48px 48px'
+          }}></div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <div className="inline-block mb-6">
+              <span className="px-5 py-2.5 bg-white/25 backdrop-blur-md text-white rounded-full text-sm font-bold shadow-lg border border-white/30">
+                ✨ NEW: Service Hub
               </span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold mb-4 text-white">
+            <h2 className="text-4xl md:text-6xl font-extrabold mb-6 text-white tracking-tight">
               Beyond Housing & Jobs
             </h2>
-            <p className="text-lg text-white/90 max-w-3xl mx-auto mb-8">
-              Access essential services, local support, discounts, and community events to make your J1 experience unforgettable
+            <p className="text-xl md:text-2xl text-white/95 max-w-3xl mx-auto mb-2 font-medium leading-relaxed">
+              Access essential services, local support, discounts, and community events
+            </p>
+            <p className="text-lg text-white/80 max-w-2xl mx-auto">
+              to make your J1 experience unforgettable
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-                <Car className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="font-bold text-white mb-2">Airport Transfers</h3>
-              <p className="text-sm text-white/80">Get picked up from the airport and transported safely to your accommodation</p>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="font-bold text-white mb-2">Group Trips & Events</h3>
-              <p className="text-sm text-white/80">Join trips and social events organized by students and local providers</p>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-                <Gift className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="font-bold text-white mb-2">Student Discounts</h3>
-              <p className="text-sm text-white/80">Save money with exclusive discounts from local businesses and partners</p>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-                <FileText className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="font-bold text-white mb-2">Essential Services</h3>
-              <p className="text-sm text-white/80">Tax help, SIM cards, bedding kits, cleaning, and more essential services</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-4 justify-center">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
             <button
               onClick={() => setShowAuthModal(true)}
-              className="group relative overflow-hidden bg-white text-purple-600 px-8 py-4 rounded-xl text-lg font-semibold hover:shadow-2xl transition-all hover:scale-105 active:scale-95"
+              className="group bg-white/15 backdrop-blur-md border-2 border-white/30 rounded-2xl p-7 hover:bg-white/25 hover:border-white/50 transition-all hover:scale-105 active:scale-95 text-left shadow-xl"
             >
-              <span className="relative flex items-center gap-2">
+              <div className="w-14 h-14 bg-white/25 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <Car className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="font-bold text-white mb-2 text-lg">Airport Transfers</h3>
+              <p className="text-sm text-white/90 leading-relaxed">Get picked up from the airport and transported safely to your accommodation</p>
+            </button>
+
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="group bg-white/15 backdrop-blur-md border-2 border-white/30 rounded-2xl p-7 hover:bg-white/25 hover:border-white/50 transition-all hover:scale-105 active:scale-95 text-left shadow-xl"
+            >
+              <div className="w-14 h-14 bg-white/25 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <Users className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="font-bold text-white mb-2 text-lg">Group Trips & Events</h3>
+              <p className="text-sm text-white/90 leading-relaxed">Join trips and social events organized by students and local providers</p>
+            </button>
+
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="group bg-white/15 backdrop-blur-md border-2 border-white/30 rounded-2xl p-7 hover:bg-white/25 hover:border-white/50 transition-all hover:scale-105 active:scale-95 text-left shadow-xl"
+            >
+              <div className="w-14 h-14 bg-white/25 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <Gift className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="font-bold text-white mb-2 text-lg">Student Discounts</h3>
+              <p className="text-sm text-white/90 leading-relaxed">Save money with exclusive discounts from local businesses and partners</p>
+            </button>
+
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="group bg-white/15 backdrop-blur-md border-2 border-white/30 rounded-2xl p-7 hover:bg-white/25 hover:border-white/50 transition-all hover:scale-105 active:scale-95 text-left shadow-xl"
+            >
+              <div className="w-14 h-14 bg-white/25 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <FileText className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="font-bold text-white mb-2 text-lg">Essential Services</h3>
+              <p className="text-sm text-white/90 leading-relaxed">Tax help, SIM cards, bedding kits, cleaning, and more</p>
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="group relative overflow-hidden bg-white text-purple-600 px-10 py-4 rounded-2xl text-lg font-bold hover:shadow-2xl hover:shadow-white/20 transition-all hover:scale-105 active:scale-95 min-w-[240px]"
+            >
+              <span className="relative flex items-center gap-2 justify-center">
                 <Star className="w-5 h-5" />
-                Browse Services
+                Browse All Services
               </span>
             </button>
             <button
-              onClick={() => setShowAuthModal(true)}
-              className="group relative overflow-hidden bg-white/20 backdrop-blur-sm border-2 border-white/40 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white/30 transition-all hover:scale-105 active:scale-95"
+              onClick={() => setShowBecomeProvider(true)}
+              className="group relative overflow-hidden bg-white/20 backdrop-blur-md border-2 border-white/50 text-white px-10 py-4 rounded-2xl text-lg font-bold hover:bg-white/30 hover:border-white transition-all hover:scale-105 active:scale-95 min-w-[240px]"
             >
-              <span className="relative flex items-center gap-2">
+              <span className="relative flex items-center gap-2 justify-center">
                 <Plus className="w-5 h-5" />
                 Become a Provider
               </span>
@@ -2425,78 +2587,118 @@ export default function App() {
         </div>
       </section>
 
-      {/* Deposit Protection Section */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
-        <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 rounded-3xl border-2 border-blue-200 dark:border-blue-800 p-8 md:p-12">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
-              <Shield className="w-8 h-8 text-white" />
+      {/* Why Choose VOYA LINK */}
+      <section className="bg-white dark:bg-slate-900 py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <div className="inline-block mb-4">
+              <span className="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-semibold">
+                Trusted Platform
+              </span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900 dark:text-white">
-              Your Money is Protected
+            <h2 className="text-4xl md:text-5xl font-extrabold mb-6 text-slate-900 dark:text-white">
+              Why Choose VOYA LINK?
             </h2>
-            <p className="text-lg text-slate-700 dark:text-slate-300 max-w-3xl mx-auto">
-              We hold your deposit securely in escrow to protect both tenants and landlords. No more worrying about sending money to strangers.
+            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
+              We make finding housing and employment simple, secure, and transparent
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-blue-200 dark:border-blue-700">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mb-4">
-                <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+            <div className="group p-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl border-2 border-blue-200 dark:border-blue-800 shadow-lg hover:shadow-xl hover:scale-105 transition-all h-full">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-md">
+                <Shield className="w-7 h-7 text-white" />
               </div>
-              <h3 className="font-bold mb-2 text-slate-900 dark:text-white">20% Non-Refundable</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                A small booking fee goes directly to the host when you book, showing your commitment.
-              </p>
+              <h3 className="font-bold mb-3 text-slate-900 dark:text-white text-lg">Secure Deposit Escrow</h3>
+              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">80% of your deposit held safely. Protected until move-out or refunded if host violates terms</p>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-blue-200 dark:border-blue-700">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <div className="group p-8 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all h-full">
+              <div className="w-14 h-14 bg-primary/15 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <Calendar className="w-7 h-7 text-primary" />
               </div>
-              <h3 className="font-bold mb-2 text-slate-900 dark:text-white">80% Held in Escrow</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                The majority of your deposit stays safely on our platform via Stripe until your lease ends.
-              </p>
+              <h3 className="font-bold mb-3 text-slate-900 dark:text-white text-lg">Flexible Booking</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">Book housing for your exact dates - from a few weeks to several months</p>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-blue-200 dark:border-blue-700">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mb-4">
-                <Star className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <div className="group p-8 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all h-full">
+              <div className="w-14 h-14 bg-primary/15 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <MessageCircle className="w-7 h-7 text-primary" />
               </div>
-              <h3 className="font-bold mb-2 text-slate-900 dark:text-white">Fair Resolution</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                If disputes arise, our team reviews the case and releases funds to the rightful party.
-              </p>
+              <h3 className="font-bold mb-3 text-slate-900 dark:text-white text-lg">24/7 Support</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">Get help whenever you need it with our dedicated support team</p>
+            </div>
+
+            <div className="group p-8 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all h-full">
+              <div className="w-14 h-14 bg-primary/15 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <Star className="w-7 h-7 text-primary" />
+              </div>
+              <h3 className="font-bold mb-3 text-slate-900 dark:text-white text-lg">Trusted Reviews</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">Read real reviews from students and workers who've been there</p>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border-2 border-blue-300 dark:border-blue-700">
-            <h3 className="font-bold mb-4 text-slate-900 dark:text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              How It Works
-            </h3>
-            <div className="grid md:grid-cols-3 gap-6 text-sm">
-              <div>
-                <div className="font-semibold text-slate-900 dark:text-white mb-2">If You Follow the Rules</div>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Move out on time, keep the place clean, and follow lease terms → get your full deposit back at the end
-                </p>
+      {/* Community Values */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <div className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-10 md:p-16 overflow-hidden shadow-2xl">
+          {/* Decorative elements */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{
+              backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+              backgroundSize: '40px 40px'
+            }}></div>
+          </div>
+
+          <div className="relative max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-white/25 backdrop-blur-md rounded-2xl mb-6 shadow-lg">
+                <Shield className="w-10 h-10 text-white" />
               </div>
-              <div>
-                <div className="font-semibold text-slate-900 dark:text-white mb-2">If Host Acts Inappropriately</div>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Illegal eviction, unsafe conditions, or violates your rights → we refund your deposit immediately
-                </p>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-6">
+                Our Commitment to You
+              </h2>
+              <p className="text-xl md:text-2xl text-white/95 leading-relaxed max-w-4xl mx-auto font-semibold">
+                Everyone here has rights. Everyone here has responsibilities. Our goal is to make the experience safer, fairer, and more transparent for all sides.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 mt-10">
+              <div className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border-2 border-white/30 hover:bg-white/25 transition-all shadow-lg">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-white/25 rounded-xl flex items-center justify-center flex-shrink-0 mb-4 shadow-md">
+                    <Shield className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-xl mb-2">Safer</h3>
+                    <p className="text-sm text-white/90">Protected platform for all users</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <div className="font-semibold text-slate-900 dark:text-white mb-2">If You Break the Terms</div>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Damage property, skip rent, or violate lease → the deposit is released to the host for damages
-                </p>
+
+              <div className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border-2 border-white/30 hover:bg-white/25 transition-all shadow-lg">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-white/25 rounded-xl flex items-center justify-center flex-shrink-0 mb-4 shadow-md">
+                    <Scale className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-xl mb-2">Fairer</h3>
+                    <p className="text-sm text-white/90">Equal treatment for everyone</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border-2 border-white/30 hover:bg-white/25 transition-all shadow-lg">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-white/25 rounded-xl flex items-center justify-center flex-shrink-0 mb-4 shadow-md">
+                    <Eye className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-xl mb-2">Transparent</h3>
+                    <p className="text-sm text-white/90">Clear and open processes</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2504,38 +2706,89 @@ export default function App() {
       </section>
 
       {/* Final CTA */}
-      <section className="bg-gradient-to-r from-primary via-purple-600 to-purple-700 py-20">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
+      <section className="relative bg-gradient-to-r from-primary via-purple-600 to-purple-700 py-28 overflow-hidden">
+        {/* Decorative Background */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+            backgroundSize: '32px 32px'
+          }}></div>
+        </div>
+
+        <div className="relative max-w-5xl mx-auto px-6 text-center">
+          <h2 className="text-4xl md:text-6xl font-extrabold mb-8 text-white tracking-tight">
             Ready to Start Your Journey?
           </h2>
-          <p className="text-lg text-white/90 mb-10 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-white/95 mb-12 leading-relaxed max-w-3xl mx-auto font-medium">
             Join thousands of international students and seasonal workers who found their perfect housing and employment through VOYA LINK
           </p>
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="bg-white text-primary px-8 py-4 rounded-2xl text-lg font-semibold hover:shadow-2xl transition-all hover:scale-105 active:scale-95"
-          >
-            Get Started for Free
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="group relative overflow-hidden bg-white text-primary px-12 py-5 rounded-2xl text-xl font-bold hover:shadow-2xl hover:shadow-white/20 transition-all hover:scale-105 active:scale-95 min-w-[280px]"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-primary/10 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+              <span className="relative">Get Started Free</span>
+            </button>
+          </div>
+          <p className="text-white/80 text-sm mt-6">No credit card required • Takes less than 2 minutes</p>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-white py-12">
+      <footer className="bg-slate-950 text-white py-16 border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <svg viewBox="0 0 80 80" className="w-8 h-8" fill="none">
-                <path d="M20 15 L40 55 L60 15" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                <circle cx="40" cy="20" r="8" fill="white" opacity="0.3"/>
-                <circle cx="40" cy="20" r="3" fill="white"/>
-              </svg>
-              <h1 className="text-xl font-bold tracking-wide">VOYA LINK</h1>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="bg-gradient-to-br from-primary to-purple-600 p-2.5 rounded-xl shadow-lg">
+                <svg viewBox="0 0 80 80" className="w-8 h-8" fill="none">
+                  <path d="M20 15 L40 55 L60 15" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                  <circle cx="40" cy="20" r="8" fill="white" opacity="0.3"/>
+                  <circle cx="40" cy="20" r="3" fill="white"/>
+                </svg>
+              </div>
+              <h1 className="text-2xl font-extrabold tracking-wide">VOYA LINK</h1>
             </div>
-            <p className="text-slate-400 text-sm max-w-2xl mx-auto">
-              © 2026 VOYA LINK. Connecting international students and seasonal workers with housing and employment opportunities.
+            <p className="text-slate-400 text-base max-w-3xl mx-auto mb-8 leading-relaxed">
+              Connecting international students and seasonal workers with trusted housing providers and employers across the United States.
             </p>
+            <div className="flex flex-wrap gap-6 justify-center mb-8">
+              <a href="#how-it-works" className="text-slate-300 hover:text-white transition-colors font-medium">
+                How It Works
+              </a>
+              <button
+                onClick={() => setShowServiceHubModal(true)}
+                className="text-slate-300 hover:text-white transition-colors font-medium"
+              >
+                Services
+              </button>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="text-slate-300 hover:text-white transition-colors font-medium"
+              >
+                Become a Host
+              </button>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="text-slate-300 hover:text-white transition-colors font-medium"
+              >
+                Post Jobs
+              </button>
+            </div>
+            <div className="border-t border-slate-800 pt-8">
+              <div className="flex items-center justify-between">
+                <p className="text-slate-500 text-sm">
+                  © 2026 VOYA LINK. All rights reserved.
+                </p>
+                <button
+                  onClick={() => setAdminMode('login')}
+                  className="text-slate-700 hover:text-slate-500 text-xs transition-colors"
+                  title="Admin Access"
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
@@ -2547,7 +2800,50 @@ export default function App() {
         />
       )}
 
-      <HelpChat userName={user?.name} userRole={user?.userType} isPublic={!user} />
+      {showServiceHubModal && (
+        <ServiceHubModal
+          onClose={() => setShowServiceHubModal(false)}
+          onBrowseServices={() => {
+            setShowServiceHubModal(false);
+            if (user) {
+              setCurrentView('services');
+            } else {
+              setShowAuthModal(true);
+            }
+          }}
+          onBecomeProvider={() => {
+            setShowServiceHubModal(false);
+            if (user) {
+              if (userIsProvider) {
+                setCurrentView('providerDashboard');
+              } else {
+                setShowBecomeProvider(true);
+              }
+            } else {
+              setShowAuthModal(true);
+            }
+          }}
+          onSelectCategory={(category) => {
+            setShowServiceHubModal(false);
+            if (user) {
+              setCurrentView('services');
+            } else {
+              setShowAuthModal(true);
+            }
+          }}
+        />
+      )}
+
+      <HelpChat
+        userName={user?.name || 'Guest'}
+        userEmail={user?.email || 'guest@unknown'}
+        userRole={user?.userType || 'guest'}
+        isPublic={!user}
+        onCreateChat={handleCreateSupportChat}
+        onAddMessage={handleAddChatMessage}
+        existingChatId={currentChat?.id}
+        existingMessages={currentChat?.messages}
+      />
     </div>
   );
 }

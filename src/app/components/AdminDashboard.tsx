@@ -1,13 +1,30 @@
 import { useState } from 'react';
 import { Shield, AlertTriangle, Flag, Users, Home, MessageSquare, FileText, CheckCircle, XCircle, Clock, TrendingUp, LogOut, Search, Filter, Eye, Ban, Trash2, CheckSquare, UserPlus, Settings as SettingsIcon, Upload, Download, ChevronRight, ArrowLeft, Phone, Mail, MapPin, Calendar, DollarSign, Image as ImageIcon, AlertCircle, RefreshCw, Send, FileCheck, UserCheck, UserX, ShieldCheck, Star, ThumbsUp, ThumbsDown, Plus, Edit, MoreVertical, Building2 } from 'lucide-react';
 import { User } from './AuthModal';
+import { AdminManagement, AdminAccount } from './AdminManagement';
+import { SupportChats, SupportChat } from './SupportChats';
+
+interface ChatMessage {
+  id: string;
+  text: string;
+  sender: 'user' | 'bot' | 'admin';
+  timestamp: string;
+  isSystemMessage?: boolean;
+}
 
 interface AdminDashboardProps {
   user: User;
   onLogout: () => void;
+  adminAccounts: AdminAccount[];
+  onCreateAdmin: (admin: Omit<AdminAccount, 'id' | 'createdAt' | 'createdBy' | 'isMaster'>) => void;
+  onDeleteAdmin: (adminId: string) => void;
+  supportChats: SupportChat[];
+  onAddChatMessage: (chatId: string, message: ChatMessage) => void;
+  onUpdateChatStatus: (chatId: string, status: 'active' | 'resolved' | 'pending') => void;
+  onAssignChat: (chatId: string, adminEmail: string) => void;
 }
 
-type AdminView = 'overview' | 'disputes' | 'disputeDetail' | 'reports' | 'reportedListings' | 'reportedUsers' | 'reportedMessages' | 'reviews' | 'users' | 'userDetail' | 'listings' | 'listingDetail' | 'verifications' | 'verificationDetail' | 'emergencies' | 'emergencyDetail' | 'refunds' | 'refundDetail' | 'cancellations' | 'supportTickets' | 'ticketDetail' | 'adminUsers' | 'activityLog' | 'addAdmin' | 'providers' | 'providerDetail' | 'providerServices' | 'serviceDetail' | 'tasks' | 'taskDetail' | 'taskDisputes' | 'goodCauses';
+type AdminView = 'overview' | 'disputes' | 'disputeDetail' | 'reports' | 'reportedListings' | 'reportedUsers' | 'reportedMessages' | 'reviews' | 'users' | 'userDetail' | 'listings' | 'listingDetail' | 'verifications' | 'verificationDetail' | 'emergencies' | 'emergencyDetail' | 'refunds' | 'refundDetail' | 'cancellations' | 'supportTickets' | 'ticketDetail' | 'adminUsers' | 'activityLog' | 'addAdmin' | 'providers' | 'providerDetail' | 'providerServices' | 'serviceDetail' | 'tasks' | 'taskDetail' | 'taskDisputes' | 'goodCauses' | 'supportChats';
 
 interface Case {
   id: string;
@@ -138,7 +155,7 @@ interface ServiceListing {
   createdAt: string;
 }
 
-export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
+export function AdminDashboard({ user, onLogout, adminAccounts, onCreateAdmin, onDeleteAdmin, supportChats, onAddChatMessage, onUpdateChatStatus, onAssignChat }: AdminDashboardProps) {
   const [currentView, setCurrentView] = useState<AdminView>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -629,6 +646,20 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
         </button>
 
         <button
+          onClick={() => setCurrentView('supportChats')}
+          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:shadow-lg transition-all text-left"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white">
+              <MessageCircle className="w-6 h-6" />
+            </div>
+            <span className="text-3xl font-bold text-blue-600">{supportChats.length}</span>
+          </div>
+          <h3 className="font-bold text-slate-900 dark:text-white mb-1">Support Chats</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Live help conversations</p>
+        </button>
+
+        <button
           onClick={() => setCurrentView('users')}
           className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:shadow-lg transition-all text-left"
         >
@@ -749,6 +780,14 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   // Disputes List
   const renderDisputes = () => (
     <div className="space-y-4">
+      <button
+        onClick={() => setCurrentView('overview')}
+        className="flex items-center gap-2 text-primary hover:text-purple-700 font-semibold mb-4 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Dashboard
+      </button>
+
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">All Disputes & Cases</h2>
       </div>
@@ -1000,6 +1039,14 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   // Reports Overview
   const renderReports = () => (
     <div className="space-y-4">
+      <button
+        onClick={() => setCurrentView('overview')}
+        className="flex items-center gap-2 text-primary hover:text-purple-700 font-semibold mb-4 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Dashboard
+      </button>
+
       <h2 className="text-2xl font-bold text-slate-900 dark:text-white">All Reports</h2>
 
       {mockReports.map((report) => (
@@ -1061,6 +1108,14 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   // Verifications List
   const renderVerifications = () => (
     <div className="space-y-4">
+      <button
+        onClick={() => setCurrentView('overview')}
+        className="flex items-center gap-2 text-primary hover:text-purple-700 font-semibold mb-4 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Dashboard
+      </button>
+
       <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Host Verification Applications</h2>
 
       {mockVerifications.map((verification) => (
@@ -1146,6 +1201,14 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   // Support Tickets List
   const renderSupportTickets = () => (
     <div className="space-y-4">
+      <button
+        onClick={() => setCurrentView('overview')}
+        className="flex items-center gap-2 text-primary hover:text-purple-700 font-semibold mb-4 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Dashboard
+      </button>
+
       <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Support Tickets</h2>
 
       {mockTickets.map((ticket) => (
@@ -1293,6 +1356,14 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   // Users List
   const renderUsers = () => (
     <div className="space-y-4">
+      <button
+        onClick={() => setCurrentView('overview')}
+        className="flex items-center gap-2 text-primary hover:text-purple-700 font-semibold mb-4 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Dashboard
+      </button>
+
       <h2 className="text-2xl font-bold text-slate-900 dark:text-white">User Management</h2>
 
       <div className="flex gap-2 mb-4 flex-wrap">
@@ -1397,6 +1468,14 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   // Activity Log
   const renderActivityLog = () => (
     <div className="space-y-4">
+      <button
+        onClick={() => setCurrentView('overview')}
+        className="flex items-center gap-2 text-primary hover:text-purple-700 font-semibold mb-4 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Dashboard
+      </button>
+
       <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Admin Activity Log</h2>
 
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
@@ -1433,6 +1512,14 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
 
   const renderProviders = () => (
     <div className="space-y-4">
+      <button
+        onClick={() => setCurrentView('overview')}
+        className="flex items-center gap-2 text-primary hover:text-purple-700 font-semibold mb-4 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Dashboard
+      </button>
+
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Provider Applications</h2>
       </div>
@@ -1726,8 +1813,47 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
         {currentView === 'providers' && renderProviders()}
         {currentView === 'providerDetail' && renderProviderDetail()}
 
+        {/* Admin Management */}
+        {currentView === 'adminUsers' && (
+          <div>
+            <button
+              onClick={() => setCurrentView('overview')}
+              className="flex items-center gap-2 text-primary hover:text-purple-700 font-semibold mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </button>
+            <AdminManagement
+              currentAdminEmail={user.email}
+              admins={adminAccounts}
+              onCreateAdmin={onCreateAdmin}
+              onDeleteAdmin={onDeleteAdmin}
+            />
+          </div>
+        )}
+
+        {/* Support Chats */}
+        {currentView === 'supportChats' && (
+          <div>
+            <button
+              onClick={() => setCurrentView('overview')}
+              className="flex items-center gap-2 text-primary hover:text-purple-700 font-semibold mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </button>
+            <SupportChats
+              chats={supportChats}
+              currentAdminEmail={user.email}
+              onAddMessage={onAddChatMessage}
+              onUpdateStatus={onUpdateChatStatus}
+              onAssignChat={onAssignChat}
+            />
+          </div>
+        )}
+
         {/* Placeholder for other views */}
-        {['reportedListings', 'reportedUsers', 'reportedMessages', 'reviews', 'emergencies', 'refunds', 'cancellations', 'listings', 'adminUsers', 'providerServices', 'serviceDetail', 'tasks', 'taskDetail', 'taskDisputes', 'goodCauses'].includes(currentView) && (
+        {['reportedListings', 'reportedUsers', 'reportedMessages', 'reviews', 'emergencies', 'refunds', 'cancellations', 'listings', 'providerServices', 'serviceDetail', 'tasks', 'taskDetail', 'taskDisputes', 'goodCauses'].includes(currentView) && (
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-12 text-center">
             <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
               <SettingsIcon className="w-8 h-8 text-purple-600" />

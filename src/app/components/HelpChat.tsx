@@ -38,8 +38,20 @@ interface ChatMessage {
 
 interface HelpChatProps {
   userName?: string;
-  userRole?: 'participant' | 'host' | 'employer' | null;
+  userEmail: string;
+  userRole?: 'participant' | 'host' | 'employer' | 'service-provider' | 'guest' | null;
   isPublic?: boolean;
+  onCreateChat?: (
+    userName: string,
+    userEmail: string,
+    userRole: 'participant' | 'host' | 'employer' | 'service-provider' | 'guest',
+    category: string,
+    initialMessage: string,
+    priority: 'low' | 'medium' | 'high' | 'critical'
+  ) => string;
+  onAddMessage?: (chatId: string, message: ChatMessage) => void;
+  existingChatId?: string | null;
+  existingMessages?: ChatMessage[];
 }
 
 const emergencyCategories = [
@@ -71,7 +83,7 @@ const supportCategories = [
   { id: 'other_support', label: 'Other' }
 ];
 
-export function HelpChat({ userName, userRole, isPublic = false }: HelpChatProps) {
+export function HelpChat({ userName, userEmail, userRole, isPublic = false, onCreateChat, onAddMessage, existingChatId, existingMessages }: HelpChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -79,10 +91,50 @@ export function HelpChat({ userName, userRole, isPublic = false }: HelpChatProps
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [adminJoined, setAdminJoined] = useState(false);
+  const [chatId, setChatId] = useState<string | null>(existingChatId || null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEmergencyMode = userRole === 'participant' || isPublic;
+
+  // Sync with existing messages from parent
+  useEffect(() => {
+    if (existingMessages && existingMessages.length > 0) {
+      // Merge existing messages with local bot messages
+      setMessages(prevMessages => {
+        // Get bot messages that aren't in existingMessages
+        const localBotMessages = prevMessages.filter(msg =>
+          msg.sender === 'bot' && !existingMessages.some(existing => existing.id === msg.id)
+        );
+
+        // Combine and sort by timestamp
+        const allMessages = [...existingMessages, ...localBotMessages].sort((a, b) => {
+          const aTime = parseInt(a.id) || 0;
+          const bTime = parseInt(b.id) || 0;
+          return aTime - bTime;
+        });
+
+        return allMessages;
+      });
+
+      if (chatStep !== 'chat') {
+        setChatStep('chat');
+      }
+
+      // Check if admin has joined
+      const hasAdminMessage = existingMessages.some(msg => msg.sender === 'admin');
+      if (hasAdminMessage && !adminJoined) {
+        setAdminJoined(true);
+      }
+    }
+  }, [existingMessages]);
+
+  // Update chatId if provided
+  useEffect(() => {
+    if (existingChatId) {
+      setChatId(existingChatId);
+    }
+  }, [existingChatId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -90,6 +142,13 @@ export function HelpChat({ userName, userRole, isPublic = false }: HelpChatProps
 
   const handleOpenChat = () => {
     setIsOpen(true);
+    // If there's an existing chat, skip directly to chat view
+    if (existingChatId && existingMessages && existingMessages.length > 0) {
+      setChatStep('chat');
+      return;
+    }
+
+    // Otherwise show welcome message for new chat
     if (messages.length === 0) {
       const welcomeMessage: ChatMessage = {
         id: '1',
@@ -144,6 +203,31 @@ export function HelpChat({ userName, userRole, isPublic = false }: HelpChatProps
     };
 
     setMessages(prev => [...prev, newMessage]);
+
+    // Create support chat when user sends their first detail message
+    if (chatStep === 'details' && !chatId && onCreateChat && selectedCategory) {
+      const category = isEmergencyMode
+        ? emergencyCategories.find(c => c.id === selectedCategory)
+        : supportCategories.find(c => c.id === selectedCategory);
+
+      const priority = isEmergencyMode && category && 'severity' in category
+        ? (category.severity === 'critical' ? 'critical' : category.severity === 'high' ? 'high' : 'medium')
+        : 'low';
+
+      const newChatId = onCreateChat(
+        userName || 'Guest',
+        userEmail,
+        userRole as 'participant' | 'host' | 'employer' | 'service-provider' | 'guest',
+        category?.label || selectedCategory,
+        message,
+        priority
+      );
+      setChatId(newChatId);
+    } else if (chatId && onAddMessage) {
+      // Add message to existing chat
+      onAddMessage(chatId, newMessage);
+    }
+
     setMessage('');
 
     // Bot response
@@ -158,32 +242,15 @@ export function HelpChat({ userName, userRole, isPublic = false }: HelpChatProps
           timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         };
         setMessages(prev => [...prev, botResponse]);
+
+        // Add bot message to global chat if chat exists
+        if (chatId && onAddMessage) {
+          onAddMessage(chatId, botResponse);
+        }
+
         setChatStep('chat');
-
-        // Admin joins
-        setTimeout(() => {
-          const systemMessage: ChatMessage = {
-            id: (Date.now() + 2).toString(),
-            text: '✓ Support Specialist Joined',
-            sender: 'bot',
-            timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-            isSystemMessage: true
-          };
-          setMessages(prev => [...prev, systemMessage]);
-          setAdminJoined(true);
-
-          setTimeout(() => {
-            const adminMessage: ChatMessage = {
-              id: (Date.now() + 3).toString(),
-              text: isEmergencyMode
-                ? 'Hi, I\'m here to help you. I\'ve reviewed what you\'ve shared. You\'re safe here, and we\'ll work through this together. Can you tell me where you are right now?'
-                : 'Hello! I\'ve reviewed your inquiry and I\'m here to assist you. Let me help you resolve this.',
-              sender: 'admin',
-              timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-            };
-            setMessages(prev => [...prev, adminMessage]);
-          }, 1500);
-        }, 2000);
+        // Chat is now created and visible in admin dashboard
+        // Admins will manually join and respond from their dashboard
       }
     }, 800);
   };

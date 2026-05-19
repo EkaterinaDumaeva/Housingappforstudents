@@ -14,7 +14,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  userType: 'host' | 'participant' | 'employer';
+  userType: 'host' | 'participant' | 'employer' | 'service-provider';
   isVerified?: boolean;
   profilePhoto?: string;
   reliability?: ReliabilityData;
