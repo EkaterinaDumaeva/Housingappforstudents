@@ -39,7 +39,8 @@ app.post("/make-server-e7ac1efd/signup", async (c) => {
     const { email, password, name, userType, hostProfile, participantProfile, employerProfile } = body;
 
     // Create user with Supabase Auth
-    // Automatically confirm email since email server hasn't been configured
+    // Auto-confirm email to allow immediate login after sign-up
+    // Account verification (isVerified) is handled separately within account settings
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -51,7 +52,7 @@ app.post("/make-server-e7ac1efd/signup", async (c) => {
         employerProfile,
         isVerified: false,
       },
-      // Automatically confirm the user's email since an email server hasn't been configured.
+      // Auto-confirm email so users can sign in immediately without email verification
       email_confirm: true
     });
 

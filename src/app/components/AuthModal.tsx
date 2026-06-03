@@ -235,8 +235,8 @@ export function AuthModal({ onClose, onAuthSuccess, onAuthError }: AuthModalProp
 
         const { user: createdUser } = await response.json();
 
-        // Successful sign up - NOTE: Email verification is auto-confirmed for this prototype
-        // In production, users would receive a verification email
+        // Successful sign up - user is immediately logged in
+        // Email verification happens later within account settings, not during sign-up
         onAuthSuccess(createdUser);
         onClose();
       } catch (err) {
