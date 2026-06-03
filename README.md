@@ -1,7 +1,7 @@
 
-  # Housing App for Students
+  # VoyoLink
 
-  This is a code bundle for Housing App for Students. The original project is available at https://www.figma.com/design/yuwGIu2vCDlhElu7Q9rrro/Housing-App-for-Students.
+  This is a code bundle for VoyoLink. The original project is available at https://www.figma.com/design/yuwGIu2vCDlhElu7Q9rrro/VoyoLink.
 
   ## Running the code
 
